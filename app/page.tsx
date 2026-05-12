@@ -11,20 +11,43 @@ declare global {
 }
 
 export default function Home() {
-  // Guardar referencia afiliado
+  // Guardar y validar referencia afiliado
   useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get("ref");
+    const run = async () => {
+      const ref = new URLSearchParams(window.location.search).get("ref");
 
-    if (ref) {
-      localStorage.setItem("ref", ref);
-    }
+      if (!ref) {
+        localStorage.setItem("ref", "direct");
+        return;
+      }
+
+      // Validar contra Supabase
+      const { data, error } = await supabase
+        .from("affiliates")
+        .select("code")
+        .eq("code", ref)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (data && !error) {
+        localStorage.setItem("ref", ref);
+      } else {
+        localStorage.setItem("ref", "direct");
+      }
+    };
+
+    run();
   }, []);
 
   const handleClick = async () => {
     const ref = localStorage.getItem("ref") || "direct";
     const clickId = crypto.randomUUID();
 
-    // Guardar click en Supabase (COINCIDE con tu tabla)
+    const url =
+      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=" +
+      clickId;
+
+    // Guardar click en Supabase
     await supabase.from("clicks").insert({
       ref,
       page: window.location.pathname,
@@ -33,9 +56,14 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    const url =
-      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=" +
-      clickId;
+    // Evitar doble apertura de pestaña
+    let opened = false;
+
+    const openUrl = () => {
+      if (opened) return;
+      opened = true;
+      window.open(url, "_blank");
+    };
 
     // Google Ads conversion
     if (typeof window !== "undefined" && window.gtag) {
@@ -43,22 +71,15 @@ export default function Home() {
         send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
         value: 1.0,
         currency: "EUR",
-
-        event_callback: () => {
-          window.open(url, "_blank");
-        },
+        event_callback: openUrl,
       });
 
-      // fallback
-      setTimeout(() => {
-        window.open(url, "_blank");
-      }, 1500);
-
+      setTimeout(openUrl, 1500);
       return;
     }
 
     // fallback total
-    window.open(url, "_blank");
+    openUrl();
   };
 
   return (
