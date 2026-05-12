@@ -20,37 +20,33 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-full flex flex-col">
+    <html lang="en">
+      <body>
 
-        {/* GOOGLE ADS TAG */}
+        {/* GOOGLE TAG */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"
           strategy="afterInteractive"
         />
 
-        {/* INIT CORRECTO */}
-        <Script id="gtag-init" strategy="afterInteractive">
+        {/* INIT */}
+        <Script id="google-ads" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
 
             function gtag(){
-              window.dataLayer.push(arguments);
+              dataLayer.push(arguments);
             }
 
             window.gtag = gtag;
 
             gtag('js', new Date());
 
-            gtag('config', 'AW-18157086862', {
-              send_page_view: true,
-              allow_enhanced_conversions: true,
-              debug_mode: true
-            });
+            gtag('config', 'AW-18157086862');
           `}
         </Script>
 

@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
+    dataLayer?: any[];
   }
 }
 
@@ -22,7 +23,13 @@ export default function Home() {
   const handleClick = async () => {
     const ref = localStorage.getItem("ref") || "direct";
 
-    // ✅ Conversión Google Ads
+    // Guardar click en Supabase
+    await supabase.from("clicks").insert({
+      ref,
+      created_at: new Date().toISOString(),
+    });
+
+    // Conversión Google Ads
     if (typeof window !== "undefined" && window.gtag) {
       window.gtag("event", "conversion", {
         send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
@@ -31,17 +38,13 @@ export default function Home() {
       });
     }
 
-    // ✅ Guardar click en Supabase
-    await supabase.from("clicks").insert({
-      ref,
-      created_at: new Date().toISOString(),
-    });
-
-    // ✅ Abrir enlace afiliado
-    window.open(
-      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1",
-      "_blank"
-    );
+    // Esperar un poco antes de abrir
+    setTimeout(() => {
+      window.open(
+        "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1",
+        "_blank"
+      );
+    }, 500);
   };
 
   return (
