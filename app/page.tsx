@@ -12,12 +12,20 @@ export default function Home() {
   const handleClick = async () => {
     const ref = localStorage.getItem("ref") || "direct";
 
-    // 🔥 guardar click en base de datos
+    // 🔥 Google Ads conversion event
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "conversion", {
+        send_to: "AW-18157086862/gGYJCNCF26scEI7R_NFD",
+      });
+    }
+
+    // 💾 guardar click en Supabase
     await supabase.from("clicks").insert({
       ref,
       created_at: new Date(),
     });
 
+    // 🚀 redirección
     window.open(
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1",
       "_blank"
