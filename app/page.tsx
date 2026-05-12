@@ -29,22 +29,31 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // Conversión Google Ads
+    const url =
+      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
+
+    // Google Ads conversion
     if (typeof window !== "undefined" && window.gtag) {
       window.gtag("event", "conversion", {
         send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
         value: 1.0,
         currency: "EUR",
+
+        event_callback: () => {
+          window.open(url, "_blank");
+        },
       });
+
+      // fallback
+      setTimeout(() => {
+        window.open(url, "_blank");
+      }, 1500);
+
+      return;
     }
 
-    // Esperar un poco antes de abrir
-    setTimeout(() => {
-      window.open(
-        "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1",
-        "_blank"
-      );
-    }, 500);
+    // fallback total
+    window.open(url, "_blank");
   };
 
   return (
