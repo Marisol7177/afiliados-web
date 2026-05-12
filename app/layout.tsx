@@ -16,38 +16,24 @@ export default function RootLayout({
     <html lang="en">
       <body>
 
-        {/* GOOGLE ADS */}
+        {/* ONE SINGLE GTAG LOADER */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"
           strategy="afterInteractive"
         />
 
-        <Script id="gtag-ads" strategy="afterInteractive">
+        <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
-
             function gtag(){dataLayer.push(arguments);}
             window.gtag = gtag;
 
             gtag('js', new Date());
+
+            // Google Ads
             gtag('config', 'AW-18157086862');
-          `}
-        </Script>
 
-        {/* GOOGLE ANALYTICS 4 */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
-          strategy="afterInteractive"
-        />
-
-        <Script id="ga4-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-
-            function gtag(){dataLayer.push(arguments);}
-            window.gtag = gtag;
-
-            gtag('js', new Date());
+            // GA4 (solo config, NO segundo script)
             gtag('config', 'G-XXXXXXXXXX');
           `}
         </Script>
