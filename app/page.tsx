@@ -22,15 +22,18 @@ export default function Home() {
 
   const handleClick = async () => {
     const ref = localStorage.getItem("ref") || "direct";
+    const clickId = crypto.randomUUID();
 
     // Guardar click en Supabase
     await supabase.from("clicks").insert({
+      id: clickId,
       ref,
       created_at: new Date().toISOString(),
     });
 
     const url =
-      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
+      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=" +
+      clickId;
 
     // Google Ads conversion
     if (typeof window !== "undefined" && window.gtag) {
