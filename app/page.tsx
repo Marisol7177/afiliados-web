@@ -24,10 +24,12 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const clickId = crypto.randomUUID();
 
-    // Guardar click en Supabase
+    // Guardar click en Supabase (COINCIDE con tu tabla)
     await supabase.from("clicks").insert({
-      id: clickId,
       ref,
+      page: window.location.pathname,
+      user_agent: navigator.userAgent,
+      country: "unknown",
       created_at: new Date().toISOString(),
     });
 
