@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 export default function Home() {
-
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref");
     if (ref) localStorage.setItem("ref", ref);
   }, []);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     const ref = localStorage.getItem("ref") || "direct";
 
-    // tracking futuro (sin romper nada ahora)
-    console.log("affiliate ref:", ref);
+    // 🔥 guardar click en base de datos
+    await supabase.from("clicks").insert({
+      ref,
+      created_at: new Date(),
+    });
 
     window.open(
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1",
@@ -23,20 +26,14 @@ export default function Home() {
 
   return (
     <main style={styles.main}>
-      <div style={styles.container}>
+      <div style={styles.card}>
+        <h1>Create Your Meme Coin 🚀</h1>
 
-        <h1 style={styles.title}>
-          Create Your Meme Coin 🚀
-        </h1>
-
-        <p style={styles.text}>
-          Launch tokens instantly on Ethereum, Base, Solana, Arbitrum and more.
-        </p>
+        <p>Launch tokens instantly on multiple blockchains.</p>
 
         <button onClick={handleClick} style={styles.button}>
           Launch Token
         </button>
-
       </div>
     </main>
   );
@@ -51,31 +48,18 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     fontFamily: "sans-serif",
-    padding: "40px",
   },
-  container: {
-    maxWidth: "700px",
+  card: {
     textAlign: "center" as const,
   },
-  title: {
-    fontSize: "60px",
-    marginBottom: "20px",
-    fontWeight: "bold",
-  },
-  text: {
-    fontSize: "20px",
-    opacity: 0.8,
-    marginBottom: "40px",
-  },
   button: {
-    display: "inline-block",
-    padding: "18px 36px",
-    background: "#ffffff",
-    color: "#000",
-    borderRadius: "14px",
+    marginTop: "20px",
+    padding: "16px 32px",
+    background: "white",
+    color: "black",
+    borderRadius: "10px",
     border: "none",
     cursor: "pointer",
     fontWeight: "bold",
-    fontSize: "18px",
-  }
+  },
 };
