@@ -27,13 +27,13 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-full flex flex-col">
 
-        {/* ✅ Google Ads script */}
+        {/* GOOGLE ADS TAG */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"
           strategy="afterInteractive"
         />
 
-        {/* ✅ INIT CORRECTO */}
+        {/* INIT CORRECTO */}
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
@@ -47,7 +47,9 @@ export default function RootLayout({
             gtag('js', new Date());
 
             gtag('config', 'AW-18157086862', {
-              send_page_view: true
+              send_page_view: true,
+              allow_enhanced_conversions: true,
+              debug_mode: true
             });
           `}
         </Script>
