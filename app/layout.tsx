@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,24 +24,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <head>
-        {/* 🔥 Google Ads tag */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"></script>
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-18157086862');
-            `,
-          }}
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body className="min-h-full flex flex-col">
+        {/* ✅ Google Ads Tag */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"
+          strategy="afterInteractive"
         />
-      </head>
 
-      <body className="min-h-full flex flex-col">{children}</body>
+        {/* ✅ Google Ads Config */}
+        <Script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+
+            function gtag(){
+              dataLayer.push(arguments);
+            }
+
+            window.gtag = gtag;
+
+            gtag('js', new Date());
+
+            gtag('config', 'AW-18157086862');
+          `}
+        </Script>
+
+        {children}
+      </body>
     </html>
   );
 }
