@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,32 +13,32 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <head>
 
-        {/* ONE SINGLE GTAG LOADER */}
-        <Script
+        {/* GOOGLE ADS (gtag.js) */}
+        <script
+          async
           src="https://www.googletagmanager.com/gtag/js?id=AW-18157086862"
-          strategy="afterInteractive"
-        />
+        ></script>
 
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            window.gtag = gtag;
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              window.gtag = gtag;
 
-            gtag('js', new Date());
+              gtag('js', new Date());
+              gtag('config', 'AW-18157086862', {
+                send_page_view: true
+              });
+            `,
+          }}
+        ></script>
 
-            // Google Ads
-            gtag('config', 'AW-18157086862');
+      </head>
 
-            // GA4 (solo config, NO segundo script)
-            gtag('config', 'G-XXXXXXXXXX');
-          `}
-        </Script>
-
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
