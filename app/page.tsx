@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
   }
 }
 
 export default function Home() {
-  // Guardar y validar referencia afiliado
+  const isProcessing = useRef(false);
+
   useEffect(() => {
     const run = async () => {
       const ref = new URLSearchParams(window.location.search).get("ref");
@@ -21,25 +21,23 @@ export default function Home() {
         return;
       }
 
-      // Validar contra Supabase
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("affiliates")
         .select("code")
         .eq("code", ref)
         .eq("active", true)
         .maybeSingle();
 
-      if (data && !error) {
-        localStorage.setItem("ref", ref);
-      } else {
-        localStorage.setItem("ref", "direct");
-      }
+      localStorage.setItem("ref", data ? ref : "direct");
     };
 
     run();
   }, []);
 
-  const handleClick = async () => {
+  const handleClick = () => {
+    if (isProcessing.current) return;
+    isProcessing.current = true;
+
     const ref = localStorage.getItem("ref") || "direct";
     const clickId = crypto.randomUUID();
 
@@ -47,8 +45,8 @@ export default function Home() {
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=" +
       clickId;
 
-    // Guardar click en Supabase
-    await supabase.from("clicks").insert({
+    // 🔵 tracking async (NO bloquea UX)
+    supabase.from("clicks").insert({
       ref,
       page: window.location.pathname,
       user_agent: navigator.userAgent,
@@ -56,7 +54,6 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // Evitar doble apertura de pestaña
     let opened = false;
 
     const openUrl = () => {
@@ -65,21 +62,16 @@ export default function Home() {
       window.open(url, "_blank");
     };
 
-    // Google Ads conversion
-    if (typeof window !== "undefined" && window.gtag) {
-      window.gtag("event", "conversion", {
-        send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
-        value: 1.0,
-        currency: "EUR",
-        event_callback: openUrl,
-      });
+    // 🔥 Google Ads conversion seguro
+    window.gtag?.("event", "conversion", {
+      send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
+      value: 1.0,
+      currency: "EUR",
+      event_callback: openUrl,
+    });
 
-      setTimeout(openUrl, 1500);
-      return;
-    }
-
-    // fallback total
-    openUrl();
+    // fallback seguridad
+    setTimeout(openUrl, 1200);
   };
 
   return (
