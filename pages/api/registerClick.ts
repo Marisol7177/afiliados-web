@@ -20,17 +20,30 @@ export default async function handler(
   }
 
   try {
-    const rpcUrl = process.env.CHAINSTACK_HTTPS!.replace(
-      "https://",
-      `https://${process.env.CHAINSTACK_USER}:${process.env.CHAINSTACK_PASS}@`
-    );
+    const rpcBase = process.env.CHAINSTACK_HTTPS;
+    const user = process.env.CHAINSTACK_USER;
+    const pass = process.env.CHAINSTACK_PASS;
+
+    if (!rpcBase || !user || !pass) {
+      throw new Error("Missing Chainstack env variables");
+    }
+
+    const rpcUrl = rpcBase.startsWith("https://")
+      ? rpcBase.replace(
+          "https://",
+          `https://${user}:${pass}@`
+        )
+      : rpcBase;
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-    const wallet = new ethers.Wallet(
-      process.env.PRIVATE_KEY!,
-      provider
-    );
+    const privateKey = process.env.PRIVATE_KEY;
+
+    if (!privateKey) {
+      throw new Error("Missing PRIVATE_KEY");
+    }
+
+    const wallet = new ethers.Wallet(privateKey, provider);
 
     const clickContract = new ethers.Contract(
       CLICK_CONTRACT,
@@ -47,11 +60,11 @@ export default async function handler(
     });
 
   } catch (err: any) {
-    console.error("🔥 ERROR REAL FULL:", err);
+    console.error("🔥 FULL ERROR:", err);
 
     return res.status(500).json({
-      error: err?.message || "Pipeline failed",
-      details: err,
+      error: err?.message,
+      raw: err,
     });
   }
 }
