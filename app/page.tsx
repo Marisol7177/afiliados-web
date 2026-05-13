@@ -14,12 +14,15 @@ declare global {
 
 export default function Home() {
   const isProcessing = useRef(false);
-  const CONTRACT_ADDRESS = "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
+  const CONTRACT_ADDRESS =
+    "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
 
-  // Variables de entorno
-  const CHAINSTACK_HTTPS = process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
-  const CHAINSTACK_USER = process.env.NEXT_PUBLIC_CHAINSTACK_USER!;
-  const CHAINSTACK_PASS = process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
+  const CHAINSTACK_HTTPS =
+    process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
+  const CHAINSTACK_USER =
+    process.env.NEXT_PUBLIC_CHAINSTACK_USER!;
+  const CHAINSTACK_PASS =
+    process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,10 +38,11 @@ export default function Home() {
     isProcessing.current = true;
 
     const ref = localStorage.getItem("ref") || "direct";
-    const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
+    const utm_campaign =
+      localStorage.getItem("utm_campaign") || "unknown";
     const clickId = crypto.randomUUID();
 
-    // 1️⃣ Guardar click en Supabase
+    // 1️⃣ SUPABASE
     await supabase.from("clicks").insert({
       click_id: clickId,
       ref,
@@ -49,36 +53,51 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // 2️⃣ Registrar click en blockchain
+    // 2️⃣ BLOCKCHAIN (FIX Ethers v6 + Chainstack)
     try {
       let provider;
+
       if (window.ethereum) {
         provider = new ethers.BrowserProvider(window.ethereum);
       } else {
-        provider = new ethers.JsonRpcProvider({
-          url: CHAINSTACK_HTTPS,
-          user: CHAINSTACK_USER,
-          password: CHAINSTACK_PASS,
-        });
+        const rpcUrl = CHAINSTACK_HTTPS.replace(
+          "https://",
+          `https://${CHAINSTACK_USER}:${CHAINSTACK_PASS}@`
+        );
+
+        provider = new ethers.JsonRpcProvider(rpcUrl);
       }
 
-      const signer = provider.getSigner ? await provider.getSigner() : provider;
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ClickTrackerABI, signer);
+      const signer = window.ethereum
+        ? await provider.getSigner()
+        : provider;
+
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        ClickTrackerABI,
+        signer
+      );
+
       await contract.registerClick(clickId, ref);
     } catch (err) {
-      console.error("Error registrando click en blockchain:", err);
+      console.error(
+        "Error registrando click en blockchain:",
+        err
+      );
     }
 
-    // 3️⃣ Redirigir al enlace de afiliado CoinFactory
+    // 3️⃣ REDIRECCIÓN AFILIADO
     const affiliateURL = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
+
     let opened = false;
+
     const openAffiliate = () => {
       if (opened) return;
       opened = true;
       window.open(affiliateURL, "_blank");
     };
 
-    // 4️⃣ Google Ads / Analytics
+    // 4️⃣ GOOGLE ADS
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1.0,
@@ -90,37 +109,37 @@ export default function Home() {
   };
 
   return (
-    <main style={styles.main}>
-      <div style={styles.card}>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#0a0a0a",
+        color: "white",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
         <h1>Create Your Meme Coin 🚀</h1>
         <p>Launch tokens instantly on multiple blockchains.</p>
-        <button onClick={handleClick} style={styles.button}>
+
+        <button
+          onClick={handleClick}
+          style={{
+            marginTop: "20px",
+            padding: "16px 32px",
+            background: "white",
+            color: "black",
+            borderRadius: "10px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
           Launch Token
         </button>
       </div>
     </main>
   );
 }
-
-const styles = {
-  main: {
-    minHeight: "100vh",
-    background: "#0a0a0a",
-    color: "white",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    fontFamily: "sans-serif",
-  },
-  card: { textAlign: "center" as const },
-  button: {
-    marginTop: "20px",
-    padding: "16px 32px",
-    background: "white",
-    color: "black",
-    borderRadius: "10px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-};
