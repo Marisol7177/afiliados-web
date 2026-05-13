@@ -32,9 +32,6 @@ export default async function handler(
       provider
     );
 
-    // =========================
-    // CLICK TRACKER
-    // =========================
     const clickContract = new ethers.Contract(
       CLICK_CONTRACT,
       ClickTrackerABI,
@@ -49,11 +46,12 @@ export default async function handler(
       txHash: tx.hash,
     });
 
-  } catch (err) {
-    console.error("Error full pipeline:", err);
+  } catch (err: any) {
+    console.error("🔥 ERROR REAL FULL:", err);
 
     return res.status(500).json({
-      error: "Pipeline failed",
+      error: err?.message || "Pipeline failed",
+      details: err,
     });
   }
 }
