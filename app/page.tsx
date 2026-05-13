@@ -16,6 +16,11 @@ export default function Home() {
   const isProcessing = useRef(false);
   const CONTRACT_ADDRESS = "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
 
+  // Variables de entorno
+  const CHAINSTACK_HTTPS = process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
+  const CHAINSTACK_USER = process.env.NEXT_PUBLIC_CHAINSTACK_USER!;
+  const CHAINSTACK_PASS = process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get("ref") || "direct";
@@ -33,7 +38,7 @@ export default function Home() {
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
     const clickId = crypto.randomUUID();
 
-    // 1️⃣ Guardar en Supabase
+    // 1️⃣ Guardar click en Supabase
     await supabase.from("clicks").insert({
       click_id: clickId,
       ref,
@@ -44,43 +49,44 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
+    // 2️⃣ Registrar click en blockchain
     try {
       let provider;
       if (window.ethereum) {
-        // Metamask disponible
         provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, ClickTrackerABI, signer);
-        await contract.registerClick(clickId, ref);
       } else {
-        // Usar endpoint seguro en Vercel
-        await fetch("/api/registerClick", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clickId, ref }),
+        provider = new ethers.JsonRpcProvider({
+          url: CHAINSTACK_HTTPS,
+          user: CHAINSTACK_USER,
+          password: CHAINSTACK_PASS,
         });
       }
+
+      const signer = provider.getSigner ? await provider.getSigner() : provider;
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ClickTrackerABI, signer);
+      await contract.registerClick(clickId, ref);
     } catch (err) {
       console.error("Error registrando click en blockchain:", err);
     }
 
-    // Redirección y seguimiento
-    const url = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
+    // 3️⃣ Redirigir al enlace de afiliado CoinFactory
+    const affiliateURL = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
     let opened = false;
-    const openUrl = () => {
+    const openAffiliate = () => {
       if (opened) return;
       opened = true;
-      window.open(url, "_blank");
+      window.open(affiliateURL, "_blank");
     };
 
+    // 4️⃣ Google Ads / Analytics
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1.0,
       currency: "EUR",
-      event_callback: openUrl,
+      event_callback: openAffiliate,
     });
 
-    setTimeout(openUrl, 1200);
+    setTimeout(openAffiliate, 1200);
   };
 
   return (
