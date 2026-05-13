@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
-import ClickTrackerABI from "../lib/ClickTracker.json";
+// ✅ Importamos el ABI correcto
+import ClickTrackerABI from "../lib/ClickTrackerABI";
 
 declare global {
   interface Window {
@@ -89,7 +90,24 @@ export default function Home() {
 }
 
 const styles = {
-  main: { minHeight: "100vh", background: "#0a0a0a", color: "white", display: "flex", justifyContent: "center", alignItems: "center", fontFamily: "sans-serif" },
+  main: {
+    minHeight: "100vh",
+    background: "#0a0a0a",
+    color: "white",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    fontFamily: "sans-serif",
+  },
   card: { textAlign: "center" as const },
-  button: { marginTop: "20px", padding: "16px 32px", background: "white", color: "black", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: "bold" }
+  button: {
+    marginTop: "20px",
+    padding: "16px 32px",
+    background: "white",
+    color: "black",
+    borderRadius: "10px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
 };
