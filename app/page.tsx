@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
-// ✅ Importamos el ABI correcto
 import ClickTrackerABI from "../lib/ClickTrackerABI";
 
 declare global {
@@ -34,7 +33,7 @@ export default function Home() {
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
     const clickId = crypto.randomUUID();
 
-    // Supabase
+    // 1️⃣ Guardar en Supabase
     await supabase.from("clicks").insert({
       click_id: clickId,
       ref,
@@ -45,19 +44,27 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // Blockchain
-    if (window.ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+    try {
+      let provider;
+      if (window.ethereum) {
+        // Metamask disponible
+        provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ClickTrackerABI, signer);
         await contract.registerClick(clickId, ref);
-      } catch (err) {
-        console.error("Error registrando click en blockchain:", err);
+      } else {
+        // Usar endpoint seguro en Vercel
+        await fetch("/api/registerClick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clickId, ref }),
+        });
       }
+    } catch (err) {
+      console.error("Error registrando click en blockchain:", err);
     }
 
-    // Redirección
+    // Redirección y seguimiento
     const url = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
     let opened = false;
     const openUrl = () => {
