@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
 import ClickTrackerABI from "../lib/ClickTrackerABI";
-import { getOwner } from "../lib/nft";
 
 declare global {
   interface Window {
@@ -13,48 +12,53 @@ declare global {
   }
 }
 
+const NFT_CONTRACT =
+  "0x4CB46E91B37b5efd1Be89E25EAb1cEd7E1C9EbCe";
+
+const RPC_URL =
+  process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
+
 export default function Home() {
   const isProcessing = useRef(false);
 
   const CONTRACT_ADDRESS =
     "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
 
-  const CHAINSTACK_HTTPS =
-    process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
-  const CHAINSTACK_USER =
-    process.env.NEXT_PUBLIC_CHAINSTACK_USER!;
-  const CHAINSTACK_PASS =
-    process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
-
-  // 🪙 NFT STATE
-  const [owner, setOwner] = useState<string>("");
+  const [owner, setOwner] = useState<string>("Loading...");
   const [loadingNFT, setLoadingNFT] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get("ref") || "direct";
-    const utm_campaign = urlParams.get("utm_campaign") || "unknown";
+    const utm_campaign =
+      urlParams.get("utm_campaign") || "unknown";
 
     localStorage.setItem("ref", ref);
     localStorage.setItem("utm_campaign", utm_campaign);
 
-    // 🪙 load NFT on start
     loadNFT();
   }, []);
 
-  // 🪙 LOAD NFT
+  // 🪙 NFT FIX DIRECTO
   const loadNFT = async () => {
     try {
       setLoadingNFT(true);
 
-      const result = await getOwner(
-        1,
-        process.env.NEXT_PUBLIC_RPC!
+      const provider =
+        new ethers.JsonRpcProvider(RPC_URL);
+
+      const contract = new ethers.Contract(
+        NFT_CONTRACT,
+        ["function ownerOf(uint256) view returns (address)"],
+        provider
       );
+
+      const result = await contract.ownerOf(1);
 
       setOwner(result);
     } catch (err) {
-      console.error("Error NFT:", err);
+      console.error("NFT error:", err);
+      setOwner("error loading NFT");
     } finally {
       setLoadingNFT(false);
     }
@@ -64,12 +68,13 @@ export default function Home() {
     if (isProcessing.current) return;
     isProcessing.current = true;
 
-    const ref = localStorage.getItem("ref") || "direct";
+    const ref =
+      localStorage.getItem("ref") || "direct";
     const utm_campaign =
-      localStorage.getItem("utm_campaign") || "unknown";
+      localStorage.getItem("utm_campaign") ||
+      "unknown";
     const clickId = crypto.randomUUID();
 
-    // 1️⃣ SUPABASE
     await supabase.from("clicks").insert({
       click_id: clickId,
       ref,
@@ -80,19 +85,21 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // 2️⃣ BLOCKCHAIN
     try {
       let provider;
 
       if (window.ethereum) {
-        provider = new ethers.BrowserProvider(window.ethereum);
+        provider =
+          new ethers.BrowserProvider(window.ethereum);
       } else {
-        const rpcUrl = CHAINSTACK_HTTPS.replace(
-          "https://",
-          `https://${CHAINSTACK_USER}:${CHAINSTACK_PASS}@`
-        );
+        const rpcUrl =
+          process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!.replace(
+            "https://",
+            `https://${process.env.NEXT_PUBLIC_CHAINSTACK_USER}:${process.env.NEXT_PUBLIC_CHAINSTACK_PASS}@`
+          );
 
-        provider = new ethers.JsonRpcProvider(rpcUrl);
+        provider =
+          new ethers.JsonRpcProvider(rpcUrl);
       }
 
       const signer = window.ethereum
@@ -107,29 +114,21 @@ export default function Home() {
 
       await contract.registerClick(clickId, ref);
     } catch (err) {
-      console.error("Error registrando click en blockchain:", err);
+      console.error(
+        "Error registrando click en blockchain:",
+        err
+      );
     }
 
-    // 3️⃣ AFFILIATE
     const affiliateURL = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
 
-    let opened = false;
+    window.open(affiliateURL, "_blank");
 
-    const openAffiliate = () => {
-      if (opened) return;
-      opened = true;
-      window.open(affiliateURL, "_blank");
-    };
-
-    // 4️⃣ ADS
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1.0,
       currency: "EUR",
-      event_callback: openAffiliate,
     });
-
-    setTimeout(openAffiliate, 1200);
   };
 
   return (
@@ -146,60 +145,24 @@ export default function Home() {
     >
       <div style={{ textAlign: "center" }}>
         <h1>Create Your Meme Coin 🚀</h1>
-        <p>Launch tokens instantly on multiple blockchains.</p>
 
-        <button
-          onClick={handleClick}
-          style={{
-            marginTop: "20px",
-            padding: "16px 32px",
-            background: "white",
-            color: "black",
-            borderRadius: "10px",
-            border: "none",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
+        <button onClick={handleClick}>
           Launch Token
         </button>
 
-        {/* 🪙 NFT SECTION */}
-        <div
-          style={{
-            marginTop: "40px",
-            padding: "15px",
-            border: "1px solid #333",
-            borderRadius: "10px",
-          }}
-        >
-          <h2>🪙 CoinFactory NFT</h2>
+        <div style={{ marginTop: "40px" }}>
+          <h2>🪙 NFT</h2>
 
           {loadingNFT ? (
-            <p>Loading NFT...</p>
+            <p>Loading...</p>
           ) : (
             <>
-              <p>
-                <strong>Owner:</strong> {owner}
-              </p>
-              <p>
-                <strong>Token ID:</strong> 1
-              </p>
+              <p>Owner: {owner}</p>
+              <p>Token ID: 1</p>
             </>
           )}
 
-          <button
-            onClick={loadNFT}
-            style={{
-              marginTop: "10px",
-              padding: "10px 20px",
-              background: "#fff",
-              color: "#000",
-              borderRadius: "8px",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={loadNFT}>
             Refresh NFT
           </button>
         </div>
