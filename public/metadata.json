@@ -1,0 +1,20 @@
+{
+  "name": "CoinFactory Landing Page",
+  "description": "Snapshot oficial de la landing page coinfactory.info. Proyecto Web3 de afiliados y tracking.",
+  "image": "https://bafybeiaycu2k6uyexwnxvkznr4gb4k76gaxalsz7zfm7a3sjysgjijtdtu.ipfs.dweb.link?filename=Dise%C3%B1o%20sin%20t%C3%ADtulo.jpg",
+  "external_url": "https://coinfactory.info",
+  "attributes": [
+    {
+      "trait_type": "Type",
+      "value": "Landing Page"
+    },
+    {
+      "trait_type": "Version",
+      "value": "1.0"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Web3 Snapshot"
+    }
+  ]
+}

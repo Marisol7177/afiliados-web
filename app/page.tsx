@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
 import ClickTrackerABI from "../lib/ClickTrackerABI";
+import { getOwner } from "../lib/nft";
 
 declare global {
   interface Window {
@@ -14,6 +15,7 @@ declare global {
 
 export default function Home() {
   const isProcessing = useRef(false);
+
   const CONTRACT_ADDRESS =
     "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
 
@@ -24,6 +26,10 @@ export default function Home() {
   const CHAINSTACK_PASS =
     process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
 
+  // 🪙 NFT STATE
+  const [owner, setOwner] = useState<string>("");
+  const [loadingNFT, setLoadingNFT] = useState(false);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get("ref") || "direct";
@@ -31,7 +37,28 @@ export default function Home() {
 
     localStorage.setItem("ref", ref);
     localStorage.setItem("utm_campaign", utm_campaign);
+
+    // 🪙 load NFT on start
+    loadNFT();
   }, []);
+
+  // 🪙 LOAD NFT
+  const loadNFT = async () => {
+    try {
+      setLoadingNFT(true);
+
+      const result = await getOwner(
+        1,
+        process.env.NEXT_PUBLIC_RPC!
+      );
+
+      setOwner(result);
+    } catch (err) {
+      console.error("Error NFT:", err);
+    } finally {
+      setLoadingNFT(false);
+    }
+  };
 
   const handleClick = async () => {
     if (isProcessing.current) return;
@@ -53,7 +80,7 @@ export default function Home() {
       created_at: new Date().toISOString(),
     });
 
-    // 2️⃣ BLOCKCHAIN (FIX Ethers v6 + Chainstack)
+    // 2️⃣ BLOCKCHAIN
     try {
       let provider;
 
@@ -80,13 +107,10 @@ export default function Home() {
 
       await contract.registerClick(clickId, ref);
     } catch (err) {
-      console.error(
-        "Error registrando click en blockchain:",
-        err
-      );
+      console.error("Error registrando click en blockchain:", err);
     }
 
-    // 3️⃣ REDIRECCIÓN AFILIADO
+    // 3️⃣ AFFILIATE
     const affiliateURL = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
 
     let opened = false;
@@ -97,7 +121,7 @@ export default function Home() {
       window.open(affiliateURL, "_blank");
     };
 
-    // 4️⃣ GOOGLE ADS
+    // 4️⃣ ADS
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1.0,
@@ -139,6 +163,46 @@ export default function Home() {
         >
           Launch Token
         </button>
+
+        {/* 🪙 NFT SECTION */}
+        <div
+          style={{
+            marginTop: "40px",
+            padding: "15px",
+            border: "1px solid #333",
+            borderRadius: "10px",
+          }}
+        >
+          <h2>🪙 CoinFactory NFT</h2>
+
+          {loadingNFT ? (
+            <p>Loading NFT...</p>
+          ) : (
+            <>
+              <p>
+                <strong>Owner:</strong> {owner}
+              </p>
+              <p>
+                <strong>Token ID:</strong> 1
+              </p>
+            </>
+          )}
+
+          <button
+            onClick={loadNFT}
+            style={{
+              marginTop: "10px",
+              padding: "10px 20px",
+              background: "#fff",
+              color: "#000",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Refresh NFT
+          </button>
+        </div>
       </div>
     </main>
   );
