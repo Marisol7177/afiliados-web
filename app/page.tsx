@@ -14,55 +14,48 @@ export default function Home() {
 
   useEffect(() => {
     const run = async () => {
-      const ref = new URLSearchParams(window.location.search).get("ref");
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get("ref") || "direct";
+      const utm_campaign = urlParams.get("utm_campaign") || "unknown";
 
-      if (!ref) {
-        localStorage.setItem("ref", "direct");
-        return;
-      }
-
-      const { data } = await supabase
-        .from("affiliates")
-        .select("code")
-        .eq("code", ref)
-        .eq("active", true)
-        .maybeSingle();
-
-      localStorage.setItem("ref", data ? ref : "direct");
+      localStorage.setItem("ref", ref);
+      localStorage.setItem("utm_campaign", utm_campaign);
     };
 
     run();
   }, []);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isProcessing.current) return;
     isProcessing.current = true;
 
     const ref = localStorage.getItem("ref") || "direct";
+    const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
     const clickId = crypto.randomUUID();
+
+    // 🔵 Insertar en Supabase tabla clicks
+    await supabase.from("clicks").insert({
+      click_id: clickId,
+      ref,
+      page: window.location.pathname,
+      user_agent: navigator.userAgent,
+      country: "unknown",
+      utm_campaign,
+      created_at: new Date().toISOString(),
+    });
 
     const url =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=" +
       clickId;
 
-    // 🔵 tracking async (NO bloquea UX)
-    supabase.from("clicks").insert({
-      ref,
-      page: window.location.pathname,
-      user_agent: navigator.userAgent,
-      country: "unknown",
-      created_at: new Date().toISOString(),
-    });
-
     let opened = false;
-
     const openUrl = () => {
       if (opened) return;
       opened = true;
       window.open(url, "_blank");
     };
 
-    // 🔥 Google Ads conversion seguro
+    // Google Ads conversion
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1.0,
@@ -70,7 +63,7 @@ export default function Home() {
       event_callback: openUrl,
     });
 
-    // fallback seguridad
+    // fallback por seguridad
     setTimeout(openUrl, 1200);
   };
 
@@ -78,9 +71,7 @@ export default function Home() {
     <main style={styles.main}>
       <div style={styles.card}>
         <h1>Create Your Meme Coin 🚀</h1>
-
         <p>Launch tokens instantly on multiple blockchains.</p>
-
         <button onClick={handleClick} style={styles.button}>
           Launch Token
         </button>
@@ -99,11 +90,7 @@ const styles = {
     alignItems: "center",
     fontFamily: "sans-serif",
   },
-
-  card: {
-    textAlign: "center" as const,
-  },
-
+  card: { textAlign: "center" as const },
   button: {
     marginTop: "20px",
     padding: "16px 32px",
