@@ -2,17 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
-import { ethers } from "ethers";
 
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
   }
 }
-
-const abi = [
-  "function registerClick(bytes32 clickId) returns (address)"
-];
 
 export default function Home() {
   const lock = useRef(false);
@@ -50,32 +45,29 @@ export default function Home() {
       console.log("Supabase ignored");
     }
 
-    // 2️⃣ BASE AFFILIATE (NO SE TOCA)
+    // 2️⃣ BASE AFFILIATE
     const BASE_AFFILIATE =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
-    // 3️⃣ SMART CONTRACT TRACKING (SAFE)
+    // 3️⃣ SERVER SIDE BLOCKCHAIN TRACKING
     try {
-      const provider = new ethers.JsonRpcProvider(
-        process.env.NEXT_PUBLIC_RPC_URL
-      );
+      const clickHash = crypto.randomUUID();
 
-      const contract = new ethers.Contract(
-        process.env.NEXT_PUBLIC_TRAFFIC_MANAGER!,
-        abi,
-        provider
-      );
-
-      const clickHash = ethers.id(clickId);
-
-      await contract.registerClick(clickHash);
+      await fetch("/api/base-log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          hash: clickHash,
+        }),
+      });
     } catch (err) {
-      console.log("Web3 fallback used", err);
+      console.log("Base log failed", err);
     }
 
-    // 4️⃣ REDIRECT FINAL (SIEMPRE TU AFILIADO)
+    // 4️⃣ REDIRECT
     const affiliateURL = `${BASE_AFFILIATE}&click_id=${clickId}`;
-
     window.open(affiliateURL, "_blank");
 
     lock.current = false;

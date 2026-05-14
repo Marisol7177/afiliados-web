@@ -1,82 +1,71 @@
 import { ethers } from "ethers";
+import { createClient } from "@supabase/supabase-js";
 
-let buffer: string[] = [];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(req: Request) {
   try {
-    const { hash } = await req.json();
+    const { click_id, affiliate, amount } = await req.json();
 
-    if (!hash) {
+    if (!click_id || !affiliate) {
       return Response.json(
-        {
-          success: false,
-          error: "Missing hash",
-        },
+        { success: false, error: "Missing data" },
         { status: 400 }
       );
     }
 
-    buffer.push(hash);
+    // 1. guardar conversión
+    await supabase.from("conversions").insert({
+      click_id,
+      affiliate,
+      amount: amount || 1,
+      created_at: new Date().toISOString(),
+    });
 
-    console.log("CLICK BUFFERED:", hash);
+    // 2. crear ID único anti doble pago
+    const conversionId = ethers.id(click_id + affiliate);
 
-    if (buffer.length >= 50) {
-      const batch = buffer.join("|");
+    // 3. wallet backend (NO MetaMask)
+    const provider = new ethers.JsonRpcProvider(
+      "https://mainnet.base.org"
+    );
 
-      const finalHash = ethers.keccak256(
-        ethers.toUtf8Bytes(batch)
-      );
+    const wallet = new ethers.Wallet(
+      process.env.PRIVATE_KEY!,
+      provider
+    );
 
-      const provider = new ethers.JsonRpcProvider(
-        "https://mainnet.base.org"
-      );
+    // 4. contrato de pagos
+    const contract = new ethers.Contract(
+      process.env.AFFILIATE_REWARDS!,
+      [
+        "function rewardAffiliate(address affiliate, uint256 amount, bytes32 conversionId)"
+      ],
+      wallet
+    );
 
-      const privateKey = process.env.PRIVATE_KEY;
+    // 5. pago automático
+    const tx = await contract.rewardAffiliate(
+      affiliate,
+      amount || 1,
+      conversionId
+    );
 
-      if (!privateKey) {
-        return Response.json(
-          {
-            success: false,
-            error: "Missing PRIVATE_KEY",
-          },
-          { status: 500 }
-        );
-      }
-
-      const wallet = new ethers.Wallet(
-        privateKey,
-        provider
-      );
-
-      const tx = await wallet.sendTransaction({
-        to: wallet.address,
-        value: 0,
-        data: ethers.hexlify(
-          ethers.toUtf8Bytes(
-            `BATCH:${finalHash}`
-          )
-        ),
-      });
-
-      console.log("BATCH SENT:", tx.hash);
-
-      buffer = [];
-    }
+    console.log("PAYMENT SENT:", tx.hash);
 
     return Response.json({
       success: true,
-      buffered: buffer.length,
+      tx: tx.hash,
+      conversionId,
     });
 
-  } catch (error: any) {
+  } catch (err: any) {
     return Response.json(
-      {
-        success: false,
-        error: error.message,
-      },
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
 }
-
-``
