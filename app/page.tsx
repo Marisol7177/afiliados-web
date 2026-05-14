@@ -2,124 +2,89 @@
 
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import { ethers } from "ethers";
 
-declare global {
-  interface Window {
-    gtag?: (...args: any[]) => void;
-  }
-}
+const abi = [
+  "function getConfig() view returns (string,string,bool)"
+];
 
 export default function Home() {
-
-  const isProcessing = useRef(false);
+  const lock = useRef(false);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
 
-    const urlParams =
-      new URLSearchParams(window.location.search);
-
-    const ref =
-      urlParams.get("ref") || "direct";
-
-    const utm_campaign =
-      urlParams.get("utm_campaign") || "unknown";
-
-    localStorage.setItem("ref", ref);
+    localStorage.setItem(
+      "ref",
+      urlParams.get("ref") || "direct"
+    );
 
     localStorage.setItem(
       "utm_campaign",
-      utm_campaign
+      urlParams.get("utm_campaign") || "unknown"
     );
-
   }, []);
 
   const handleClick = async () => {
+    if (lock.current) return;
+    lock.current = true;
 
-    if (isProcessing.current) return;
+    const clickId = crypto.randomUUID();
 
-    isProcessing.current = true;
+    const ref = localStorage.getItem("ref") || "direct";
+    const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    const ref =
-      localStorage.getItem("ref") || "direct";
-
-    const utm_campaign =
-      localStorage.getItem("utm_campaign") || "unknown";
-
-    const clickId =
-      crypto.randomUUID();
-
-    // 1️⃣ SUPABASE
-
-    await supabase
-      .from("clicks")
-      .insert({
+    // 1️⃣ TRACKING (NO CRÍTICO)
+    try {
+      await supabase.from("clicks").insert({
         click_id: clickId,
         ref,
         page: window.location.pathname,
         user_agent: navigator.userAgent,
-        country: "unknown",
         utm_campaign,
         created_at: new Date().toISOString(),
       });
-
-    // 2️⃣ BACKEND BLOCKCHAIN API
-
-    try {
-
-      const response =
-        await fetch(
-          "/api/registerClick",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              clickId,
-              ref,
-            }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      console.log(
-        "Blockchain TX:",
-        data
-      );
-
-    } catch (err) {
-
-      console.error(
-        "Error blockchain:",
-        err
-      );
+    } catch (e) {
+      console.log("Supabase error ignored");
     }
 
-    // 3️⃣ AFFILIATE REDIRECT
+    // 2️⃣ DEFAULT AFFILIATE (FALLBACK SEGURO)
+    let affiliateURL =
+      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
-    const affiliateURL =
-      `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
+    // 3️⃣ WEB3 CONTRACT (WEBGATE CONTROL)
+    try {
+      const provider = new ethers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_RPC_URL
+      );
 
-    window.open(
-      affiliateURL,
-      "_blank"
-    );
+      const contract = new ethers.Contract(
+        process.env.NEXT_PUBLIC_CONTRACT!,
+        abi,
+        provider
+      );
 
-    // 4️⃣ GOOGLE ADS
+      const [url, , active] = await contract.getConfig();
 
-    window.gtag?.(
-      "event",
-      "conversion",
-      {
-        send_to:
-          "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
-        value: 1.0,
-        currency: "EUR",
+      if (active && url) {
+        affiliateURL = `${url}?click_id=${clickId}`;
+      } else {
+        affiliateURL += `&click_id=${clickId}`;
       }
-    );
+    } catch (e) {
+      console.log("Web3 fallback used");
+      affiliateURL += `&click_id=${clickId}`;
+    }
+
+    // 4️⃣ REDIRECT (SIEMPRE FUNCIONA)
+    window.open(affiliateURL, "_blank");
+
+    // 5️⃣ ADS TRACKING
+    window.gtag?.("event", "conversion", {
+      send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
+      value: 1,
+      currency: "EUR",
+    });
   };
 
   return (
@@ -135,23 +100,18 @@ export default function Home() {
       }}
     >
       <div style={{ textAlign: "center" }}>
+        <h1>Create Your Meme Coin 🚀</h1>
 
-        <h1>
-          Create Your Meme Coin 🚀
-        </h1>
-
-        <p>
-          Launch tokens instantly on multiple blockchains.
-        </p>
+        <p>Launch tokens instantly on multiple blockchains.</p>
 
         <button
           onClick={handleClick}
           style={{
-            marginTop: "20px",
+            marginTop: 20,
             padding: "16px 32px",
             background: "white",
             color: "black",
-            borderRadius: "10px",
+            borderRadius: 10,
             border: "none",
             cursor: "pointer",
             fontWeight: "bold",
@@ -159,7 +119,6 @@ export default function Home() {
         >
           Launch Token
         </button>
-
       </div>
     </main>
   );
