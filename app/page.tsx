@@ -10,7 +10,6 @@ declare global {
   }
 }
 
-// 👇 NUEVO CONTRATO (traffic manager)
 const abi = [
   "function registerClick(bytes32 clickId) returns (address)"
 ];
@@ -21,11 +20,7 @@ export default function Home() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
-    localStorage.setItem(
-      "ref",
-      urlParams.get("ref") || "direct"
-    );
-
+    localStorage.setItem("ref", urlParams.get("ref") || "direct");
     localStorage.setItem(
       "utm_campaign",
       urlParams.get("utm_campaign") || "unknown"
@@ -51,15 +46,15 @@ export default function Home() {
         utm_campaign,
         created_at: new Date().toISOString(),
       });
-    } catch (e) {
+    } catch {
       console.log("Supabase ignored");
     }
 
-    // 2️⃣ DEFAULT FALLBACK LINK
-    let affiliateURL =
+    // 2️⃣ BASE AFFILIATE (NO SE TOCA)
+    const BASE_AFFILIATE =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
-    // 3️⃣ SMART CONTRACT ROUTING
+    // 3️⃣ SMART CONTRACT TRACKING (SAFE)
     try {
       const provider = new ethers.JsonRpcProvider(
         process.env.NEXT_PUBLIC_RPC_URL
@@ -73,16 +68,14 @@ export default function Home() {
 
       const clickHash = ethers.id(clickId);
 
-      const affiliate = await contract.registerClick(clickHash);
-
-      affiliateURL = `https://coinfactory.app/?r=${affiliate}&click_id=${clickId}`;
-
+      await contract.registerClick(clickHash);
     } catch (err) {
       console.log("Web3 fallback used", err);
-      affiliateURL += `&click_id=${clickId}`;
     }
 
-    // 4️⃣ REDIRECT
+    // 4️⃣ REDIRECT FINAL (SIEMPRE TU AFILIADO)
+    const affiliateURL = `${BASE_AFFILIATE}&click_id=${clickId}`;
+
     window.open(affiliateURL, "_blank");
 
     lock.current = false;
