@@ -4,15 +4,15 @@ import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
 
-// ✅ FIX TYPESCRIPT (gtag)
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
   }
 }
 
+// 👇 NUEVO CONTRATO (traffic manager)
 const abi = [
-  "function getConfig() view returns (string,string,bool)"
+  "function registerClick(bytes32 clickId) returns (address)"
 ];
 
 export default function Home() {
@@ -41,7 +41,7 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    // 1️⃣ SUPABASE
+    // 1️⃣ SUPABASE TRACKING
     try {
       await supabase.from("clicks").insert({
         click_id: clickId,
@@ -52,38 +52,33 @@ export default function Home() {
         created_at: new Date().toISOString(),
       });
     } catch (e) {
-      console.log("Supabase error ignored");
+      console.log("Supabase ignored");
     }
 
-    // 2️⃣ DEFAULT AFFILIATE
+    // 2️⃣ DEFAULT FALLBACK LINK
     let affiliateURL =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
-    // 3️⃣ WEB3 ROUTER
+    // 3️⃣ SMART CONTRACT ROUTING
     try {
       const provider = new ethers.JsonRpcProvider(
         process.env.NEXT_PUBLIC_RPC_URL
       );
 
       const contract = new ethers.Contract(
-        process.env.NEXT_PUBLIC_ROUTER_CONTRACT!,
+        process.env.NEXT_PUBLIC_TRAFFIC_MANAGER!,
         abi,
         provider
       );
 
-      const [url, , active] = await contract.getConfig();
+      const clickHash = ethers.id(clickId);
 
-      if (active && url) {
-        if (url.includes("?")) {
-          affiliateURL = `${url}&click_id=${clickId}`;
-        } else {
-          affiliateURL = `${url}?click_id=${clickId}`;
-        }
-      } else {
-        affiliateURL += `&click_id=${clickId}`;
-      }
-    } catch (e) {
-      console.log("Web3 fallback used");
+      const affiliate = await contract.registerClick(clickHash);
+
+      affiliateURL = `https://coinfactory.app/?r=${affiliate}&click_id=${clickId}`;
+
+    } catch (err) {
+      console.log("Web3 fallback used", err);
       affiliateURL += `&click_id=${clickId}`;
     }
 
@@ -92,7 +87,7 @@ export default function Home() {
 
     lock.current = false;
 
-    // 5️⃣ ADS TRACKING (FIX TYPESCRIPT SAFE)
+    // 5️⃣ ADS TRACKING
     (window as any).gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1,
