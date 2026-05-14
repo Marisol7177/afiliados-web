@@ -4,6 +4,13 @@ import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { ethers } from "ethers";
 
+// ✅ FIX TYPESCRIPT (gtag)
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 const abi = [
   "function getConfig() view returns (string,string,bool)"
 ];
@@ -34,7 +41,7 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    // 1️⃣ SUPABASE TRACKING
+    // 1️⃣ SUPABASE
     try {
       await supabase.from("clicks").insert({
         click_id: clickId,
@@ -83,11 +90,10 @@ export default function Home() {
     // 4️⃣ REDIRECT
     window.open(affiliateURL, "_blank");
 
-    // liberar lock (IMPORTANTE)
     lock.current = false;
 
-    // 5️⃣ ADS
-    window.gtag?.("event", "conversion", {
+    // 5️⃣ ADS TRACKING (FIX TYPESCRIPT SAFE)
+    (window as any).gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1,
       currency: "EUR",
