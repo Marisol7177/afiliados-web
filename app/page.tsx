@@ -34,7 +34,7 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    // 1️⃣ TRACKING (NO CRÍTICO)
+    // 1️⃣ SUPABASE TRACKING
     try {
       await supabase.from("clicks").insert({
         click_id: clickId,
@@ -48,18 +48,18 @@ export default function Home() {
       console.log("Supabase error ignored");
     }
 
-    // 2️⃣ DEFAULT AFFILIATE (FALLBACK SEGURO)
+    // 2️⃣ DEFAULT AFFILIATE
     let affiliateURL =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
-    // 3️⃣ WEB3 CONTRACT (WEBGATE CONTROL)
+    // 3️⃣ WEB3 ROUTER
     try {
       const provider = new ethers.JsonRpcProvider(
         process.env.NEXT_PUBLIC_RPC_URL
       );
 
       const contract = new ethers.Contract(
-        process.env.NEXT_PUBLIC_CONTRACT!,
+        process.env.NEXT_PUBLIC_ROUTER_CONTRACT!,
         abi,
         provider
       );
@@ -67,7 +67,11 @@ export default function Home() {
       const [url, , active] = await contract.getConfig();
 
       if (active && url) {
-        affiliateURL = `${url}?click_id=${clickId}`;
+        if (url.includes("?")) {
+          affiliateURL = `${url}&click_id=${clickId}`;
+        } else {
+          affiliateURL = `${url}?click_id=${clickId}`;
+        }
       } else {
         affiliateURL += `&click_id=${clickId}`;
       }
@@ -76,10 +80,13 @@ export default function Home() {
       affiliateURL += `&click_id=${clickId}`;
     }
 
-    // 4️⃣ REDIRECT (SIEMPRE FUNCIONA)
+    // 4️⃣ REDIRECT
     window.open(affiliateURL, "_blank");
 
-    // 5️⃣ ADS TRACKING
+    // liberar lock (IMPORTANTE)
+    lock.current = false;
+
+    // 5️⃣ ADS
     window.gtag?.("event", "conversion", {
       send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
       value: 1,
@@ -101,7 +108,6 @@ export default function Home() {
     >
       <div style={{ textAlign: "center" }}>
         <h1>Create Your Meme Coin 🚀</h1>
-
         <p>Launch tokens instantly on multiple blockchains.</p>
 
         <button
