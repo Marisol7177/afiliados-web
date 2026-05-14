@@ -6,31 +6,72 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// 💰 pago fijo en tokens ERC20 (3 tokens)
+const PAYOUT_AMOUNT = 3;
+
 export async function POST(req: Request) {
   try {
-    const { click_id, affiliate, amount } = await req.json();
+    const { click_id } = await req.json();
 
-    if (!click_id || !affiliate) {
+    if (!click_id) {
       return Response.json(
-        { success: false, error: "Missing data" },
+        { success: false, error: "Missing click_id" },
         { status: 400 }
       );
     }
 
-    // 1. guardar conversión
+    // 1. VALIDAR CLICK REAL (NO inventado)
+    const { data: click } = await supabase
+      .from("clicks")
+      .select("*")
+      .eq("click_id", click_id)
+      .single();
+
+    if (!click) {
+      return Response.json(
+        { success: false, error: "Invalid click" },
+        { status: 400 }
+      );
+    }
+
+    // 2. EVITAR DOBLE PAGO
+    const { data: alreadyPaid } = await supabase
+      .from("conversions")
+      .select("*")
+      .eq("click_id", click_id)
+      .single();
+
+    if (alreadyPaid) {
+      return Response.json(
+        { success: false, error: "Already paid" },
+        { status: 409 }
+      );
+    }
+
+    // 3. AFFILIATE REAL (IMPORTANTE: viene del click)
+    const affiliate = click.ref;
+
+    if (!affiliate || affiliate === "direct") {
+      return Response.json(
+        { success: false, error: "Invalid affiliate" },
+        { status: 400 }
+      );
+    }
+
+    // 4. guardar conversión
     await supabase.from("conversions").insert({
       click_id,
       affiliate,
-      amount: amount || 1,
+      amount: PAYOUT_AMOUNT,
       created_at: new Date().toISOString(),
     });
 
-    // 2. crear ID único anti doble pago
+    // 5. ID único anti doble pago en blockchain
     const conversionId = ethers.id(click_id + affiliate);
 
-    // 3. wallet backend (NO MetaMask)
+    // 6. provider + wallet backend
     const provider = new ethers.JsonRpcProvider(
-      "https://mainnet.base.org"
+      process.env.NEXT_PUBLIC_RPC_URL!
     );
 
     const wallet = new ethers.Wallet(
@@ -38,7 +79,7 @@ export async function POST(req: Request) {
       provider
     );
 
-    // 4. contrato de pagos
+    // 7. contrato ERC20 rewards
     const contract = new ethers.Contract(
       process.env.AFFILIATE_REWARDS!,
       [
@@ -47,24 +88,30 @@ export async function POST(req: Request) {
       wallet
     );
 
-    // 5. pago automático
+    // 8. pago fijo ERC20 (3 tokens)
     const tx = await contract.rewardAffiliate(
       affiliate,
-      amount || 1,
+      PAYOUT_AMOUNT,
       conversionId
     );
 
-    console.log("PAYMENT SENT:", tx.hash);
+    console.log("ERC20 PAYMENT SENT:", tx.hash);
 
     return Response.json({
       success: true,
       tx: tx.hash,
-      conversionId,
+      affiliate,
+      paid: PAYOUT_AMOUNT
     });
 
   } catch (err: any) {
+    console.error("ERROR:", err);
+
     return Response.json(
-      { success: false, error: err.message },
+      {
+        success: false,
+        error: err.message || "Unknown error"
+      },
       { status: 500 }
     );
   }
