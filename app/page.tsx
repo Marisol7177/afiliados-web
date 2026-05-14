@@ -2,98 +2,124 @@
 
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
-import { ethers } from "ethers";
-import ClickTrackerABI from "../lib/ClickTrackerABI";
 
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
-    ethereum?: any;
   }
 }
 
 export default function Home() {
+
   const isProcessing = useRef(false);
 
-  const CONTRACT_ADDRESS =
-    "0xe64dF6bAF0F1aC6ff587d3661D43D4065D55E7A5";
-
-  const CHAINSTACK_HTTPS =
-    process.env.NEXT_PUBLIC_CHAINSTACK_HTTPS!;
-  const CHAINSTACK_USER =
-    process.env.NEXT_PUBLIC_CHAINSTACK_USER!;
-  const CHAINSTACK_PASS =
-    process.env.NEXT_PUBLIC_CHAINSTACK_PASS!;
-
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const ref = urlParams.get("ref") || "direct";
-    const utm_campaign = urlParams.get("utm_campaign") || "unknown";
+
+    const urlParams =
+      new URLSearchParams(window.location.search);
+
+    const ref =
+      urlParams.get("ref") || "direct";
+
+    const utm_campaign =
+      urlParams.get("utm_campaign") || "unknown";
 
     localStorage.setItem("ref", ref);
-    localStorage.setItem("utm_campaign", utm_campaign);
+
+    localStorage.setItem(
+      "utm_campaign",
+      utm_campaign
+    );
+
   }, []);
 
   const handleClick = async () => {
+
     if (isProcessing.current) return;
+
     isProcessing.current = true;
 
-    const ref = localStorage.getItem("ref") || "direct";
-    const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
-    const clickId = crypto.randomUUID();
+    const ref =
+      localStorage.getItem("ref") || "direct";
+
+    const utm_campaign =
+      localStorage.getItem("utm_campaign") || "unknown";
+
+    const clickId =
+      crypto.randomUUID();
 
     // 1️⃣ SUPABASE
-    await supabase.from("clicks").insert({
-      click_id: clickId,
-      ref,
-      page: window.location.pathname,
-      user_agent: navigator.userAgent,
-      country: "unknown",
-      utm_campaign,
-      created_at: new Date().toISOString(),
-    });
 
-    // 2️⃣ BLOCKCHAIN
+    await supabase
+      .from("clicks")
+      .insert({
+        click_id: clickId,
+        ref,
+        page: window.location.pathname,
+        user_agent: navigator.userAgent,
+        country: "unknown",
+        utm_campaign,
+        created_at: new Date().toISOString(),
+      });
+
+    // 2️⃣ BACKEND BLOCKCHAIN API
+
     try {
-      let provider;
 
-      if (window.ethereum) {
-        provider = new ethers.BrowserProvider(window.ethereum);
-      } else {
-        const rpcUrl = CHAINSTACK_HTTPS.replace(
-          "https://",
-          `https://${CHAINSTACK_USER}:${CHAINSTACK_PASS}@`
+      const response =
+        await fetch(
+          "/api/registerClick",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              clickId,
+              ref,
+            }),
+          }
         );
 
-        provider = new ethers.JsonRpcProvider(rpcUrl);
-      }
+      const data =
+        await response.json();
 
-      const signer = window.ethereum
-        ? await provider.getSigner()
-        : provider;
-
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        ClickTrackerABI,
-        signer
+      console.log(
+        "Blockchain TX:",
+        data
       );
 
-      await contract.registerClick(clickId, ref);
     } catch (err) {
-      console.error("Error blockchain:", err);
+
+      console.error(
+        "Error blockchain:",
+        err
+      );
     }
 
     // 3️⃣ AFFILIATE REDIRECT
-    const affiliateURL = `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
 
-    window.open(affiliateURL, "_blank");
+    const affiliateURL =
+      `https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1&click_id=${clickId}`;
+
+    window.open(
+      affiliateURL,
+      "_blank"
+    );
 
     // 4️⃣ GOOGLE ADS
-    window.gtag?.("event", "conversion", {
-      send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
-      value: 1.0,
-      currency: "EUR",
-    });
+
+    window.gtag?.(
+      "event",
+      "conversion",
+      {
+        send_to:
+          "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
+        value: 1.0,
+        currency: "EUR",
+      }
+    );
   };
 
   return (
@@ -109,8 +135,14 @@ export default function Home() {
       }}
     >
       <div style={{ textAlign: "center" }}>
-        <h1>Create Your Meme Coin 🚀</h1>
-        <p>Launch tokens instantly on multiple blockchains.</p>
+
+        <h1>
+          Create Your Meme Coin 🚀
+        </h1>
+
+        <p>
+          Launch tokens instantly on multiple blockchains.
+        </p>
 
         <button
           onClick={handleClick}
@@ -127,6 +159,7 @@ export default function Home() {
         >
           Launch Token
         </button>
+
       </div>
     </main>
   );
