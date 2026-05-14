@@ -1,0 +1,9 @@
+type RewardPaid @entity(immutable: true) {
+  id: Bytes!
+  affiliate: Bytes! # address
+  amount: BigInt! # uint256
+  conversionId: Bytes! # bytes32
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
