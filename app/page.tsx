@@ -25,7 +25,6 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    // 1️⃣ SUPABASE (SE QUEDA)
     try {
       await supabase.from("clicks").insert({
         click_id: clickId,
@@ -39,7 +38,6 @@ export default function Home() {
       console.log("Supabase ignored");
     }
 
-    // 2️⃣ BACKEND + BLOCKCHAIN TRACKING
     try {
       await fetch("/api/base-log", {
         method: "POST",
@@ -54,7 +52,6 @@ export default function Home() {
       console.log("Base log failed", err);
     }
 
-    // 3️⃣ REDIRECT
     const BASE_AFFILIATE =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 

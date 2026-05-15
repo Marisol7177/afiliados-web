@@ -1,0 +1,6 @@
+backend-subgraphs/
+affiliate-rewards/
+click-tracker-subgraph/
+generated/
+build/
+node_modules/
