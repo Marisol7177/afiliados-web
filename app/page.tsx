@@ -3,12 +3,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-declare global {
-  interface Window {
-    gtag?: (...args: any[]) => void;
-  }
-}
-
 export default function Home() {
   const lock = useRef(false);
 
@@ -31,7 +25,7 @@ export default function Home() {
     const ref = localStorage.getItem("ref") || "direct";
     const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
 
-    // 1️⃣ SUPABASE TRACKING
+    // 1️⃣ SUPABASE (SE QUEDA)
     try {
       await supabase.from("clicks").insert({
         click_id: clickId,
@@ -45,39 +39,28 @@ export default function Home() {
       console.log("Supabase ignored");
     }
 
-    // 2️⃣ BASE AFFILIATE
-    const BASE_AFFILIATE =
-      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
-
-    // 3️⃣ SERVER SIDE BLOCKCHAIN TRACKING
+    // 2️⃣ BACKEND + BLOCKCHAIN TRACKING
     try {
-      const clickHash = crypto.randomUUID();
-
       await fetch("/api/base-log", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          hash: clickHash,
+          click_id: clickId,
         }),
       });
     } catch (err) {
       console.log("Base log failed", err);
     }
 
-    // 4️⃣ REDIRECT
-    const affiliateURL = `${BASE_AFFILIATE}&click_id=${clickId}`;
-    window.open(affiliateURL, "_blank");
+    // 3️⃣ REDIRECT
+    const BASE_AFFILIATE =
+      "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
+
+    window.open(`${BASE_AFFILIATE}&click_id=${clickId}`, "_blank");
 
     lock.current = false;
-
-    // 5️⃣ ADS TRACKING
-    (window as any).gtag?.("event", "conversion", {
-      send_to: "AW-18157086862/-GpsCP7u3ascEI7R_NFD",
-      value: 1,
-      currency: "EUR",
-    });
   };
 
   return (
@@ -89,29 +72,21 @@ export default function Home() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        fontFamily: "sans-serif",
       }}
     >
-      <div style={{ textAlign: "center" }}>
-        <h1>Create Your Meme Coin 🚀</h1>
-        <p>Launch tokens instantly on multiple blockchains.</p>
-
-        <button
-          onClick={handleClick}
-          style={{
-            marginTop: 20,
-            padding: "16px 32px",
-            background: "white",
-            color: "black",
-            borderRadius: 10,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Launch Token
-        </button>
-      </div>
+      <button
+        onClick={handleClick}
+        style={{
+          padding: "16px 32px",
+          background: "white",
+          color: "black",
+          borderRadius: 10,
+          border: "none",
+          fontWeight: "bold",
+        }}
+      >
+        Launch Token
+      </button>
     </main>
   );
 }
