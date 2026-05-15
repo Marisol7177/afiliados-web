@@ -49,7 +49,7 @@ export default function Home() {
       console.log("Base log failed", err);
     }
 
-    // 3️⃣ Redirect a tu página / sistema de token
+    // 3️⃣ Redirigir a tu página / sistema de token
     const BASE_AFFILIATE =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
@@ -62,7 +62,7 @@ export default function Home() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#0a0a0a",
+        background: "radial-gradient(circle at top, #111, #000)",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
@@ -72,48 +72,44 @@ export default function Home() {
         padding: "24px",
       }}
     >
-      <h1 style={{ fontSize: "44px", fontWeight: "700" }}>
-        Crea tu Token / Memecoin
+      <h1 style={{ fontSize: "46px", fontWeight: "800" }}>
+        Crea tu Token o Memecoin
       </h1>
 
       <p
         style={{
           color: "#aaa",
           fontSize: "16px",
-          maxWidth: "420px",
-          marginTop: "12px",
-          marginBottom: "28px",
-          lineHeight: 1.6,
+          maxWidth: "460px",
+          marginTop: "14px",
+          marginBottom: "30px",
+          lineHeight: "1.6",
         }}
       >
-        Lanza tu token o memecoin en segundos. Mide la demanda en tiempo real
-        y convierte tu idea en movimiento.
+        Lanza tu idea en Web3 en segundos. Diseña tu token, valida demanda y
+        empieza a construir comunidad desde el primer día.
       </p>
 
       <button
         onClick={handleClick}
         style={{
-          padding: "16px 32px",
+          padding: "16px 34px",
           fontSize: "18px",
           fontWeight: "700",
-          borderRadius: "12px",
+          borderRadius: "14px",
           border: "none",
-          background: "linear-gradient(90deg, #ff0080, #7928ca)",
+          background: "linear-gradient(90deg, #ff3d81, #7c3aed)",
           color: "#fff",
           cursor: "pointer",
-          boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-          transition: "transform 0.2s, box-shadow 0.2s",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+          transition: "all 0.2s ease",
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform =
             "scale(1.05)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
-            "0 6px 20px rgba(0,0,0,0.5)";
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
-            "0 4px 15px rgba(0,0,0,0.3)";
         }}
       >
         Crear mi Token
