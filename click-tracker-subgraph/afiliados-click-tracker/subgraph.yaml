@@ -1,0 +1,26 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ClickTracker
+    network: mainnet
+    source:
+      address: "0x15489a471BcA305182c853338aCBEa6A32bA68cA"
+      abi: ClickTracker
+      startBlock: 46018809
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - ClickRegistered
+      abis:
+        - name: ClickTracker
+          file: ./abis/ClickTracker.json
+      eventHandlers:
+        - event: ClickRegistered(indexed bytes32,indexed address,string,uint256)
+          handler: handleClickRegistered
+      file: ./src/click-tracker.ts

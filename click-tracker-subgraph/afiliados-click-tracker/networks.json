@@ -1,0 +1,8 @@
+{
+  "mainnet": {
+    "ClickTracker": {
+      "address": "0x15489a471BcA305182c853338aCBEa6A32bA68cA",
+      "startBlock": 46018809
+    }
+  }
+}
