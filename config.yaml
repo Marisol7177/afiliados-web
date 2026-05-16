@@ -2,7 +2,7 @@
 name: envio-indexer
 
 chains:
-  - id: 8453         # <-- cambia esto si tu chain real no es 2741
+  - id: 2741                  # <-- asegúrate de poner tu chain real
     start_block: 0
 
     contracts:
