@@ -1,64 +1,103 @@
-import { createClient } from "@supabase/supabase-js";
+export const runtime = "edge";
 
+import { createClient } from "@supabase/supabase-js";
+import { ethers } from "ethers";
+
+// Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Chainstack provider
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+
 export async function POST(req: Request) {
   try {
     const { click_id } = await req.json();
 
-    if (!click_id) {
-      return Response.json({ error: "Missing click_id" }, { status: 400 });
+    // 1. validación básica
+    if (typeof click_id !== "string" || click_id.length < 10) {
+      return Response.json(
+        { error: "Invalid click_id" },
+        { status: 400 }
+      );
     }
 
-    // 1. validar click
-    const { data: click } = await supabase
+    // IP (opcional pero útil para antifraude)
+    const ip =
+      req.headers.get("x-forwarded-for") || "unknown";
+
+    // 2. validar click
+    const { data: click, error: clickError } = await supabase
       .from("clicks")
       .select("*")
       .eq("click_id", click_id)
-      .single();
+      .maybeSingle();
 
-    if (!click) {
-      return Response.json({ error: "Invalid click" }, { status: 400 });
+    if (clickError || !click) {
+      return Response.json(
+        { error: "Invalid click" },
+        { status: 400 }
+      );
     }
 
-    // 2. evitar doble pago
+    // 🔥 CHAINSTACK CHECK (NUEVO)
+    try {
+      const blockNumber = await provider.getBlockNumber();
+      console.log("Chainstack OK block:", blockNumber);
+    } catch (err) {
+      console.log("Chainstack error (non-blocking):", err);
+    }
+
+    // 3. evitar doble pago
     const { data: exists } = await supabase
       .from("conversions")
       .select("click_id")
       .eq("click_id", click_id)
-      .single();
+      .maybeSingle();
 
     if (exists) {
-      return Response.json({ error: "Already processed" }, { status: 409 });
+      return Response.json(
+        { error: "Already processed" },
+        { status: 409 }
+      );
     }
 
-    // 3. guardar conversión (sin pagar aún)
+    // 4. guardar conversión (pendiente)
     await supabase.from("conversions").insert({
       click_id,
       affiliate: click.ref,
       amount: 3,
       status: "pending",
+      ip_address: ip,
       created_at: new Date().toISOString(),
     });
 
-    // 4. ENVIAR A COLA (NO BLOCKCHAIN AQUÍ)
-    await fetch(process.env.QUEUE_URL!, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "payout",
-        click_id,
-        affiliate: click.ref,
-        amount: 3,
-      }),
-    });
+    // 5. enviar a cola (con timeout seguro)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      await fetch(process.env.QUEUE_URL!, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "payout",
+          click_id,
+          affiliate: click.ref,
+          amount: 3,
+        }),
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     return Response.json({
       success: true,
       status: "queued",
+      chainstack: true
     });
 
   } catch (err: any) {
