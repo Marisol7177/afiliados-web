@@ -1,21 +1,28 @@
-name: Test GitHub Runner
+name: Test GitHub Runners
+
 on:
   workflow_dispatch:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        runner: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Mostrar sistema
+      - name: Mostrar runner
         run: |
-          echo "=== GitHub-hosted runner ==="
-          uname -a
-          echo "=== CPU ==="
-          nproc
-          echo "=== Node ==="
-          node --version
-          echo "=== Runner ==="
+          echo "=== JOB ==="
+          echo "${{ matrix.runner }}"
+          echo "=== RUNNER ==="
           echo "$RUNNER_NAME"
           echo "=== OS ==="
           echo "$RUNNER_OS"
+          echo "=== CPU ==="
+          nproc
+          echo "=== NODE ==="
+          node --version
+          echo "=== HOSTNAME ==="
+          hostname
