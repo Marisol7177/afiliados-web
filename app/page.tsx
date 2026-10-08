@@ -1,27 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+const AFFILIATE_URL =
+  "https://coinfactory.app/?r=04398a1ce6cacdddddf20ca38a971d55";
 
 export default function Home() {
-  const lock = useRef(false);
-
-  // Guardar tracking de URL al entrar
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    localStorage.setItem("ref", urlParams.get("ref") || "direct");
-    localStorage.setItem(
-      "utm_campaign",
-      urlParams.get("utm_campaign") || "unknown"
-    );
-  }, []);
-
   const handleClick = () => {
-    const clickId = crypto.randomUUID();
-
-    const BASE_AFFILIATE =
-      "https://coinfactory.app/?r=04398a1ce6cacdddddf20ca38a971d55";
-
-    window.location.href = `${BASE_AFFILIATE}&click_id=${clickId}`;
+    window.location.href = AFFILIATE_URL;
   };
 
   return (
@@ -71,14 +55,13 @@ export default function Home() {
           transition: "transform 0.2s, box-shadow 0.2s",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform =
-            "scale(1.05)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          e.currentTarget.style.transform = "scale(1.05)";
+          e.currentTarget.style.boxShadow =
             "0 6px 20px rgba(0,0,0,0.5)";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow =
             "0 4px 15px rgba(0,0,0,0.3)";
         }}
       >
