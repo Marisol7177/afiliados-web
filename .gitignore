@@ -33,3 +33,10 @@ build
 .env
 .pnpm-store
 contracts/
+
+# Next.js
+.next/
+out/
+
+# TypeScript
+next-env.d.ts
