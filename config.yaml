@@ -1,14 +1,2 @@
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: envio-indexer
-
-chains:
-  - id: 2741                  # <-- asegúrate de poner tu chain real
-    start_block: 0
-
-    contracts:
-      - name: AffiliateRewards
-        address:
-          - "0x0Bf06A0B7F91f155896Aa5fdf8f38A89e38509a9"
-        abi: ./contracts/click-tracker/out/AffiliateRewards.sol/AffiliateRewards.json
-        events:
-          - event: ClickRegistered(bytes32 indexed clickId, address indexed user, string ref, uint256 timestamp)
