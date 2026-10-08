@@ -1,0 +1,21 @@
+name: Test GitHub Runner
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mostrar sistema
+        run: |
+          echo "=== GitHub-hosted runner ==="
+          uname -a
+          echo "=== CPU ==="
+          nproc
+          echo "=== Node ==="
+          node --version
+          echo "=== Runner ==="
+          echo "$RUNNER_NAME"
+          echo "=== OS ==="
+          echo "$RUNNER_OS"
