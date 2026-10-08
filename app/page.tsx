@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-
-const AFFILIATE_URL =
-  "https://coinfactory.app/?r=04398a1ce6cacdddddf20ca38a971d55";
+import { useEffect, useRef } from "react";
 
 export default function Home() {
+  const lock = useRef(false);
+
+  // Guardar tracking de URL al entrar
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-
     localStorage.setItem("ref", urlParams.get("ref") || "direct");
     localStorage.setItem(
       "utm_campaign",
@@ -16,11 +15,20 @@ export default function Home() {
     );
   }, []);
 
+  const handleClick = () => {
+    const clickId = crypto.randomUUID();
+
+    const BASE_AFFILIATE =
+      "https://coinfactory.app/?r=04398a1ce6cacdddddf20ca38a971d55";
+
+    window.location.href = `${BASE_AFFILIATE}&click_id=${clickId}`;
+  };
+
   return (
     <main
       style={{
         minHeight: "100vh",
-        background: "radial-gradient(circle at top, #111, #000)",
+        background: "#0a0a0a",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
@@ -30,45 +38,48 @@ export default function Home() {
         padding: "24px",
       }}
     >
-      <h1 style={{ fontSize: "46px", fontWeight: "800" }}>
-        Crea tu Token o Memecoin
+      <h1 style={{ fontSize: "44px", fontWeight: "700" }}>
+        Crea tu Token / Memecoin
       </h1>
 
       <p
         style={{
           color: "#aaa",
           fontSize: "16px",
-          maxWidth: "460px",
-          marginTop: "14px",
-          marginBottom: "30px",
-          lineHeight: "1.6",
+          maxWidth: "420px",
+          marginTop: "12px",
+          marginBottom: "28px",
+          lineHeight: 1.6,
         }}
       >
-        Lanza tu idea en Web3 en segundos. Diseña tu token, valida demanda y
-        empieza a construir comunidad desde el primer día.
+        Lanza tu token o memecoin en segundos. Mide la demanda en tiempo real
+        y convierte tu idea en movimiento.
       </p>
 
       <button
+        onClick={handleClick}
         style={{
-          padding: "16px 34px",
+          padding: "16px 32px",
           fontSize: "18px",
           fontWeight: "700",
-          borderRadius: "14px",
+          borderRadius: "12px",
           border: "none",
-          background: "linear-gradient(90deg, #ff3d81, #7c3aed)",
+          background: "linear-gradient(90deg, #ff0080, #7928ca)",
           color: "#fff",
           cursor: "pointer",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-          transition: "all 0.2s ease",
+          boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+          transition: "transform 0.2s, box-shadow 0.2s",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.05)";
+          (e.currentTarget as HTMLButtonElement).style.transform =
+            "scale(1.05)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow =
+            "0 6px 20px rgba(0,0,0,0.5)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-        }}
-        onClick={() => {
-          window.location.href = AFFILIATE_URL;
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow =
+            "0 4px 15px rgba(0,0,0,0.3)";
         }}
       >
         Crear mi Token
