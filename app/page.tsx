@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { supabase } from "../lib/supabase";
 
 export default function Home() {
   const lock = useRef(false);
@@ -21,35 +20,7 @@ export default function Home() {
     lock.current = true;
 
     const clickId = crypto.randomUUID();
-    const ref = localStorage.getItem("ref") || "direct";
-    const utm_campaign = localStorage.getItem("utm_campaign") || "unknown";
-
-    // 1️⃣ Supabase tracking
-    try {
-      await supabase.from("clicks").insert({
-        click_id: clickId,
-        ref,
-        page: window.location.pathname,
-        user_agent: navigator.userAgent,
-        utm_campaign,
-        created_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.log("Supabase ignored", err);
-    }
-
-    // 2️⃣ Backend tracking
-    try {
-      await fetch("/api/base-log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ click_id: clickId }),
-      });
-    } catch (err) {
-      console.log("Base log failed", err);
-    }
-
-    // 3️⃣ Redirigir a tu página / sistema de token
+    // Redirigir a tu página / sistema de token
     const BASE_AFFILIATE =
       "https://coinfactory.app/?r=845e00a9f5446e08c9d362e6eb7163d1";
 
