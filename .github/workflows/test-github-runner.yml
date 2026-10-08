@@ -6,8 +6,10 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
+      max-parallel: 20
       matrix:
-        runner: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        runner: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     runs-on: ubuntu-latest
 
@@ -26,3 +28,12 @@ jobs:
           node --version
           echo "=== HOSTNAME ==="
           hostname
+          echo "=== INICIO ==="
+          date -u
+
+      - name: Mantener runner ocupado
+        run: |
+          echo "Runner ${{ matrix.runner }} trabajando durante 30 segundos..."
+          sleep 30
+          echo "=== FIN ==="
+          date -u
