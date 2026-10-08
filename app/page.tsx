@@ -62,7 +62,6 @@ export default function Home() {
       </p>
 
       <button
-        onClick={handleClick}
         style={{
           padding: "16px 34px",
           fontSize: "18px",
@@ -81,6 +80,10 @@ export default function Home() {
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+        }}
+        onClick={() => {
+          window.location.href =
+            "https://coinfactory.app/?r=04398a1ce6cacdddddf20ca38a971d55";
         }}
       >
         Crear mi Token
