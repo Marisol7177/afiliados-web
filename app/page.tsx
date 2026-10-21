@@ -51,7 +51,12 @@ export default function Home() {
         <strong style={{ fontSize: 22 }}>
           <span style={{ color: "#c084fc" }}>◆</span> TOKEN LAB
         </strong>
-        <a href={AFFILIATE_URL} target="_blank" rel="noopener noreferrer" style={{ color: "#cbd5e1" }}>
+        <a
+          href={AFFILIATE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#cbd5e1" }}
+        >
           Funciones
         </a>
       </nav>
