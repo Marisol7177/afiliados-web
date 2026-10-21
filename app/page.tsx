@@ -53,8 +53,6 @@ export default function Home() {
         </strong>
         <a
           href={AFFILIATE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
           style={{ color: "#cbd5e1" }}
         >
           Funciones
