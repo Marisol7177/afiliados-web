@@ -9,8 +9,7 @@ export default function Home() {
   const [clicks, setClicks] = useState(0);
 
   function handleClick() {
-    setClicks((current) => current + 1);
-    window.location.href = AFFILIATE_URL;
+    window.location.assign(AFFILIATE_URL);
   }
 
   const features = [
