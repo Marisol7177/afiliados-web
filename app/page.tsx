@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const AFFILIATE_URL =
-  "https://coinfactory.app/?r=5fab6fac5645d42c560c0b58516a2307";
+  "https://coinfactory.app/?r=7253315bb1ee4b61626aa90416db5550";
 
 export default function Home() {
   const [clicks, setClicks] = useState(0);
@@ -142,12 +142,22 @@ export default function Home() {
           margin: "auto"
         }}>
           {features.map((feature) => (
-            <article key={feature.title} style={{
-              background: "#151526",
-              border: "1px solid #292941",
-              borderRadius: 18,
-              padding: 27
-            }}>
+            <a
+              key={feature.title}
+              href={AFFILIATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "block",
+                color: "inherit",
+                textDecoration: "none",
+                background: "#151526",
+                border: "1px solid #292941",
+                borderRadius: 18,
+                padding: 27,
+                cursor: "pointer"
+              }}
+            >
               <div style={{
                 color: "#d8b4fe",
                 fontSize: 30
@@ -162,7 +172,7 @@ export default function Home() {
               }}>
                 {feature.description}
               </p>
-            </article>
+            </a>
           ))}
         </div>
       </section>
