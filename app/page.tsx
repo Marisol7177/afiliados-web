@@ -10,7 +10,7 @@ export default function Home() {
 
   function handleClick() {
     setClicks((current) => current + 1);
-    window.open(AFFILIATE_URL, "_blank", "noopener,noreferrer");
+    window.location.href = AFFILIATE_URL;
   }
 
   const features = [
@@ -53,6 +53,8 @@ export default function Home() {
         </strong>
         <a
           href={AFFILIATE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           style={{ color: "#cbd5e1" }}
         >
           Funciones
