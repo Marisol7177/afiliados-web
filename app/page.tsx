@@ -102,7 +102,8 @@ export default function Home() {
           proyectos de tokens y memecoins.
         </p>
 
-        <button onClick={handleClick} style={{
+        <a href={AFFILIATE_URL}
+          style={{
           padding: "17px 30px",
           borderRadius: 12,
           border: 0,
@@ -114,7 +115,7 @@ export default function Home() {
           boxShadow: "0 8px 35px #8b5cf644"
         }}>
           Explorar CoinFactory ↗
-        </button>
+        </a>
 
         <p style={{
           fontSize: 12,
