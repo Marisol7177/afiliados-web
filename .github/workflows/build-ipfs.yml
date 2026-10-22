@@ -60,7 +60,7 @@ jobs:
             -X POST 'https://uploads.pinata.cloud/v3/files' \
             -H "Authorization: Bearer $PINATA_JWT" \
             -F 'network=public' \
-            -F "file=@${CAR_PATH}" \
+            -F "file=@${CAR_PATH};type=application/vnd.ipld.car" \
             -F "name=afiliados-web-${GITHUB_SHA:0:7}" \
             -F 'car=true')
 
@@ -85,3 +85,12 @@ jobs:
             echo "- CID: \`$REMOTE_CID\`"
             echo "- [Abrir web mediante gateway](https://dweb.link/ipfs/$REMOTE_CID/)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save CAR backup
+        if: always() && steps.ipfs.outputs.car-path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipfs-car-${{ github.sha }}
+          path: ${{ steps.ipfs.outputs.car-path }}
+          if-no-files-found: warn
+          retention-days: 30

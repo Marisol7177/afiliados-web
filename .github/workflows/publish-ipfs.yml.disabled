@@ -1,0 +1,93 @@
+name: Publish website to IPFS via Pinata
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-ipfs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build static website
+        run: |
+          npm ci
+          npm run build
+          test -s out/index.html
+
+      - name: Install Kubo
+        run: |
+          curl --fail --show-error --location \
+            --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 300 \
+            https://dist.ipfs.tech/kubo/v0.43.1/kubo_v0.43.1_linux-amd64.tar.gz \
+            -o /tmp/kubo.tar.gz
+          tar -xzf /tmp/kubo.tar.gz -C /tmp
+          sudo install /tmp/kubo/ipfs /usr/local/bin/ipfs
+          ipfs init
+
+      - name: Create IPFS CAR
+        id: car
+        run: |
+          CID=$(ipfs add -Qr --cid-version=1 out)
+          ipfs dag export "$CID" > site.car
+          test -s site.car
+          echo "cid=$CID" >> "$GITHUB_OUTPUT"
+          echo "CID: $CID"
+          du -h site.car
+
+      - name: Upload CAR to Pinata
+        id: upload
+        env:
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+          CID: ${{ steps.car.outputs.cid }}
+        run: |
+          set -euo pipefail
+
+          test -n "$PINATA_JWT"
+
+          curl --fail --show-error --location \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 30 --max-time 600 \
+            -X POST "https://uploads.pinata.cloud/v3/files" \
+            -H "Authorization: Bearer ${PINATA_JWT}" \
+            -F "network=public" \
+            -F "file=@site.car;type=application/vnd.ipld.car" \
+            -F "name=afiliados-web-${GITHUB_SHA:0:7}" \
+            -F "car=true" \
+            -o /tmp/pinata-response.json
+
+          REMOTE_CID=$(jq -er '.data.cid' /tmp/pinata-response.json)
+          echo "remote_cid=$REMOTE_CID" >> "$GITHUB_OUTPUT"
+
+          echo "## Publicación IPFS" >> "$GITHUB_STEP_SUMMARY"
+          echo "- CID local: \`$CID\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- CID devuelto por Pinata: \`$REMOTE_CID\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Abrir contenido en IPFS](https://dweb.link/ipfs/$REMOTE_CID/)" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$CID" != "$REMOTE_CID" ]; then
+            echo "::warning::El CID devuelto por Pinata difiere del CID local. Verifica el contenido antes de publicar el enlace."
+          fi
+
+      - name: Upload CAR as backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipfs-car-${{ github.sha }}
+          path: site.car
+          retention-days: 7
