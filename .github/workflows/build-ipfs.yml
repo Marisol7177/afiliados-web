@@ -1,4 +1,4 @@
-name: Build and package IPFS website
+name: Build and publish website to IPFS
 
 on:
   push:
@@ -8,9 +8,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ipfs-publish
+  cancel-in-progress: false
+
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,35 +26,62 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Build website
+      - name: Build Next.js website
         run: |
           npm ci
           npm run build
-          test -f out/index.html
+          test -s out/index.html
 
-      - name: Install Kubo
-        run: |
-          curl --fail --show-error --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 300 \
-            https://dist.ipfs.tech/kubo/v0.43.1/kubo_v0.43.1_linux-amd64.tar.gz \
-            -o /tmp/kubo.tar.gz
-          tar -xzf /tmp/kubo.tar.gz -C /tmp
-          sudo install /tmp/kubo/ipfs /usr/local/bin/ipfs
-          ipfs init
-
-      - name: Generate CID and CAR
-        run: |
-          CID=$(ipfs add -Qr out)
-          echo "$CID" > out.cid
-          ipfs dag export "$CID" > site.car
-          echo "## IPFS publication" >> "$GITHUB_STEP_SUMMARY"
-          echo "CID: $CID" >> "$GITHUB_STEP_SUMMARY"
-          du -h site.car
-
-      - name: Upload IPFS artifact
-        uses: actions/upload-artifact@v4
+      - name: Create IPFS CAR
+        id: ipfs
+        uses: ipfs/ipfs-deploy-action@v3
         with:
-          name: ipfs-website
-          path: |
-            site.car
-            out.cid
-          retention-days: 30
+          path-to-deploy: out
+          cid-profile: unixfs-v1-2025
+          github-token: ${{ github.token }}
+
+      - name: Upload CAR to Pinata
+        env:
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+          CID: ${{ steps.ipfs.outputs.cid }}
+          CAR_PATH: ${{ steps.ipfs.outputs.car-path }}
+        run: |
+          set -euo pipefail
+          test -n "$PINATA_JWT"
+          test -s "$CAR_PATH"
+
+          RESPONSE=$(mktemp)
+          trap 'rm -f "$RESPONSE"' EXIT
+
+          HTTP_CODE=$(curl -sS \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 30 --max-time 600 \
+            -o "$RESPONSE" -w '%{http_code}' \
+            -X POST 'https://uploads.pinata.cloud/v3/files' \
+            -H "Authorization: Bearer $PINATA_JWT" \
+            -F 'network=public' \
+            -F "file=@${CAR_PATH}" \
+            -F "name=afiliados-web-${GITHUB_SHA:0:7}" \
+            -F 'car=true')
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Pinata respondió HTTP $HTTP_CODE"
+            cat "$RESPONSE"
+            exit 1
+          fi
+
+          REMOTE_CID=$(jq -er '.data.cid' "$RESPONSE")
+
+          echo "CID local: $CID"
+          echo "CID Pinata: $REMOTE_CID"
+
+          if [ "$CID" != "$REMOTE_CID" ]; then
+            echo "::error::El CID de Pinata no coincide con el CID local."
+            exit 1
+          fi
+
+          {
+            echo "## Publicación IPFS"
+            echo "- CID: \`$REMOTE_CID\`"
+            echo "- [Abrir web mediante gateway](https://dweb.link/ipfs/$REMOTE_CID/)"
+          } >> "$GITHUB_STEP_SUMMARY"
