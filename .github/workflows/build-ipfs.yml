@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Kubo
         run: |
-          curl -fsSL \
+          curl --fail --show-error --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 300 \
             https://dist.ipfs.tech/kubo/v0.43.1/kubo_v0.43.1_linux-amd64.tar.gz \
             -o /tmp/kubo.tar.gz
           tar -xzf /tmp/kubo.tar.gz -C /tmp
