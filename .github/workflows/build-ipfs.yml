@@ -1,0 +1,55 @@
+name: Build and package IPFS website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build website
+        run: |
+          npm ci
+          npm run build
+          test -f out/index.html
+
+      - name: Install Kubo
+        run: |
+          curl -fsSL \
+            https://dist.ipfs.tech/kubo/v0.43.1/kubo_v0.43.1_linux-amd64.tar.gz \
+            -o /tmp/kubo.tar.gz
+          tar -xzf /tmp/kubo.tar.gz -C /tmp
+          sudo install /tmp/kubo/ipfs /usr/local/bin/ipfs
+          ipfs init
+
+      - name: Generate CID and CAR
+        run: |
+          CID=$(ipfs add -Qr out)
+          echo "$CID" > out.cid
+          ipfs dag export "$CID" > site.car
+          echo "## IPFS publication" >> "$GITHUB_STEP_SUMMARY"
+          echo "CID: $CID" >> "$GITHUB_STEP_SUMMARY"
+          du -h site.car
+
+      - name: Upload IPFS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipfs-website
+          path: |
+            site.car
+            out.cid
+          retention-days: 30
