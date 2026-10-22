@@ -34,7 +34,7 @@ jobs:
 
       - name: Create IPFS CAR
         id: ipfs
-        uses: ipfs/ipfs-deploy-action@v3
+        uses: ipshipyard/ipfs-deploy-action@v3
         with:
           path-to-deploy: out
           cid-profile: unixfs-v1-2025
