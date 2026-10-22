@@ -40,14 +40,14 @@ jobs:
           cid-profile: unixfs-v1-2025
           github-token: ${{ github.token }}
 
-      - name: Upload CAR to Pinata
+      - name: Upload CAR to Pinion
         env:
-          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+          PINION_UPLOAD_TOKEN: ${{ secrets.PINION_UPLOAD_TOKEN }}
           CID: ${{ steps.ipfs.outputs.cid }}
           CAR_PATH: ${{ steps.ipfs.outputs.car-path }}
         run: |
           set -euo pipefail
-          test -n "$PINATA_JWT"
+          test -n "$PINION_UPLOAD_TOKEN"
           test -s "$CAR_PATH"
 
           RESPONSE=$(mktemp)
@@ -57,35 +57,33 @@ jobs:
             --retry 3 --retry-all-errors \
             --connect-timeout 30 --max-time 600 \
             -o "$RESPONSE" -w '%{http_code}' \
-            -X POST 'https://uploads.pinata.cloud/v3/files' \
-            -H "Authorization: Bearer $PINATA_JWT" \
-            -F 'network=public' \
-            -F "file=@${CAR_PATH};type=application/vnd.ipld.car" \
-            -F "name=afiliados-web-${GITHUB_SHA:0:7}" \
-            -F 'car=true')
+            -X POST 'https://helium.pinion.build/upload/pat/v1/?format=car&name=afiliados-web' \
+            -H "Authorization: Bearer $PINION_UPLOAD_TOKEN" \
+            -H 'Content-Type: application/vnd.ipld.car' \
+            --data-binary "@${CAR_PATH}")
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Pinata respondió HTTP $HTTP_CODE"
+            echo "::error::Pinion respondió HTTP $HTTP_CODE"
             cat "$RESPONSE"
             exit 1
           fi
 
-          REMOTE_CID=$(jq -er '.data.cid' "$RESPONSE")
+          REMOTE_CID=$(jq -er '.pin.cid' "$RESPONSE")
 
           echo "CID local: $CID"
-          echo "CID Pinata: $REMOTE_CID"
+          echo "CID Pinion: $REMOTE_CID"
 
           if [ "$CID" != "$REMOTE_CID" ]; then
-            echo "::error::El CID de Pinata no coincide con el CID local."
+            echo "::error::El CID de Pinion no coincide con el CID local."
+            cat "$RESPONSE"
             exit 1
           fi
 
           {
-            echo "## Publicación IPFS"
+            echo "## Publicación IPFS mediante Pinion"
             echo "- CID: \`$REMOTE_CID\`"
             echo "- [Abrir web mediante gateway](https://dweb.link/ipfs/$REMOTE_CID/)"
           } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Save CAR backup
         if: always() && steps.ipfs.outputs.car-path != ''
         uses: actions/upload-artifact@v4
