@@ -1,0 +1,51 @@
+name: Deploy web to Filebase IPFS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static website
+        run: npm run build
+
+      - name: Verify export
+        run: test -f out/index.html
+
+
+      - name: Package website
+        run: npx --yes ipfs-car pack ./out --output ./website.car
+
+      - name: Upload to Filebase
+        env:
+          FILEBASE_IPFS_TOKEN: ${{ secrets.FILEBASE_IPFS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$FILEBASE_IPFS_TOKEN"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${FILEBASE_IPFS_TOKEN}" \
+            --form "file=@website.car;type=application/vnd.ipld.car" \
+            "https://rpc.filebase.io/api/v0/dag/import?pin-roots=true" \
+            --output filebase-response.json
+
+          cat filebase-response.json
