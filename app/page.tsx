@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const AFFILIATE_URL =
-  "https://coinfactory.app/?r=7253315bb1ee4b61626aa90416db5550";
+  "https://coinfactory.app/?r=a5702de77fb80b7d7efbb4fbaf108c29";
 
 export default function Home() {
   const [clicks, setClicks] = useState(0);
