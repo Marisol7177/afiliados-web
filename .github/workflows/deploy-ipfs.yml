@@ -29,6 +29,8 @@ jobs:
 
       - name: Verify export
         run: test -f out/index.html
+          test -f out/lab.html
+          grep -q "Transferencia de archivos P2P" out/lab.html
 
 
       - name: Package website
