@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import P2PNode from "./components/P2PNode";
 
 export const metadata: Metadata = {
   title: "Create Your Meme Coin",
@@ -41,7 +42,7 @@ export default function RootLayout({
 
       </head>
 
-      <body>{children}</body>
+      <body><P2PNode />{children}</body>
     </html>
   );
 }
