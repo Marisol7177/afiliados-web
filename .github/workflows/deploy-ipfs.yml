@@ -28,10 +28,10 @@ jobs:
         run: npm run build
 
       - name: Verify export
-        run: test -f out/index.html
+        run: |
+          test -f out/index.html
           test -f out/lab.html
           grep -q "Transferencia de archivos P2P" out/lab.html
-
 
       - name: Package website
         run: npx --yes ipfs-car pack ./out --output ./website.car
