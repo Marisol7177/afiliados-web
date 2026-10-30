@@ -69,9 +69,18 @@ self.addEventListener("fetch", event => {
     }
 
     // Intenta P2P primero; si falla o tarda, conserva el HTTP normal.
-    await requestFromPeers(url.pathname).catch(() => false);
+    const p2pPath =
+      url.pathname === "/"
+        ? "/index.html"
+        : url.pathname === "/lab" || url.pathname === "/lab/"
+          ? "/lab.html"
+          : url.pathname;
 
-    const p2pCopy = await cache.match(request.url);
+    await requestFromPeers(p2pPath).catch(() => false);
+
+    const p2pCopy = await cache.match(
+      new URL(p2pPath, self.location.origin).href
+    );
     if (p2pCopy?.headers.get("X-Coinfactory-P2P") === "verified") {
       return p2pCopy;
     }
