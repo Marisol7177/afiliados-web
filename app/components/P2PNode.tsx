@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const SIGNAL = "wss://coinfactory-signaling.onrender.com";
 const ROOM = "coinfactory-public";
-const CACHE = "coinfactory-p2p-v1";
+const CACHE = "coinfactory-p2p-v2";
 
 export default function P2PNode() {
   useEffect(() => {
@@ -19,6 +19,97 @@ export default function P2PNode() {
       chunks: string[]; received: number;
     }>();
     let manifest: Array<{path:string;size:number;sha256:string}> = [];
+    const pendingFetches = new Map<string, Array<{
+      port: MessagePort;
+      timer: number;
+    }>>();
+
+    function answerPending(path: string, ready: boolean) {
+      const waiters = pendingFetches.get(path);
+      if (!waiters) return;
+      pendingFetches.delete(path);
+      for (const waiter of waiters) {
+        window.clearTimeout(waiter.timer);
+        try {
+          waiter.port.postMessage({ type: ready ? "P2P_READY" : "P2P_MISS" });
+          waiter.port.close();
+        } catch {}
+      }
+    }
+
+    function handleServiceWorkerMessage(event: MessageEvent) {
+      const msg = event.data;
+      const port = event.ports?.[0];
+      if (msg?.type !== "P2P_FETCH" || !port) return;
+
+      const path = msg.path;
+      if (typeof path !== "string" || !path.startsWith("/") ||
+          path.startsWith("//")) {
+        port.postMessage({ type: "P2P_MISS" });
+        port.close();
+        return;
+      }
+
+      const entry = manifest.find(resource => resource.path === path);
+      if (!entry) {
+        port.postMessage({ type: "P2P_MISS" });
+        port.close();
+        return;
+      }
+
+      void (async () => {
+        const cache = await getCache();
+        const cached = await cache.match(new URL(path, location.origin).href);
+        if (cached?.headers.get("X-Coinfactory-P2P") === "verified") {
+          port.postMessage({ type: "P2P_READY" });
+          port.close();
+          return;
+        }
+
+        const openChannels = [...channels.values()].filter(
+          channel => channel.readyState === "open"
+        );
+        if (!openChannels.length) {
+          port.postMessage({ type: "P2P_MISS" });
+          port.close();
+          return;
+        }
+
+        const waiters = pendingFetches.get(path) || [];
+        const timer = window.setTimeout(() => {
+          const current = pendingFetches.get(path);
+          if (!current) return;
+          const remaining = current.filter(item => item.port !== port);
+          if (remaining.length) pendingFetches.set(path, remaining);
+          else pendingFetches.delete(path);
+          try {
+            port.postMessage({ type: "P2P_MISS" });
+            port.close();
+          } catch {}
+        }, 2500);
+
+        waiters.push({ port, timer });
+        pendingFetches.set(path, waiters);
+
+        for (const channel of openChannels) {
+          sendJSON(channel, {
+            kind: "resource-request",
+            path,
+            sha256: entry.sha256
+          });
+        }
+      })().catch(() => {
+        try {
+          port.postMessage({ type: "P2P_MISS" });
+          port.close();
+        } catch {}
+      });
+    }
+
+    navigator.serviceWorker?.addEventListener(
+      "message",
+      handleServiceWorkerMessage
+    );
 
     const log = (...args: unknown[]) => console.info("[Coinfactory P2P]", ...args);
 
@@ -181,13 +272,36 @@ export default function P2PNode() {
           }
 
           const cache = await getCache();
+          const extension = transfer.path.split("?")[0].split(".").pop()?.toLowerCase();
+          const mimeTypes: Record<string, string> = {
+            html: "text/html; charset=utf-8",
+            css: "text/css; charset=utf-8",
+            js: "text/javascript; charset=utf-8",
+            mjs: "text/javascript; charset=utf-8",
+            json: "application/json",
+            txt: "text/plain; charset=utf-8",
+            svg: "image/svg+xml",
+            png: "image/png",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            webp: "image/webp",
+            avif: "image/avif",
+            ico: "image/x-icon",
+            woff: "font/woff",
+            woff2: "font/woff2",
+            ttf: "font/ttf",
+            otf: "font/otf"
+          };
           await cache.put(
             new URL(transfer.path, location.origin).href,
             new Response(buffer, {
-              headers: { "Content-Type": "application/octet-stream",
-                         "X-Coinfactory-P2P": "verified" }
+              headers: {
+                "Content-Type": mimeTypes[extension || ""] || "application/octet-stream",
+                "X-Coinfactory-P2P": "verified"
+              }
             })
           );
+          answerPending(transfer.path, true);
           log("Recurso P2P verificado y guardado:", transfer.path);
         } catch (error) {
           log("Error verificando recurso:", error);
@@ -321,6 +435,20 @@ export default function P2PNode() {
     void start();
     return () => {
       stopped = true;
+      navigator.serviceWorker?.removeEventListener(
+        "message",
+        handleServiceWorkerMessage
+      );
+      for (const [path, waiters] of pendingFetches) {
+        for (const waiter of waiters) {
+          window.clearTimeout(waiter.timer);
+          try {
+            waiter.port.postMessage({ type: "P2P_MISS" });
+            waiter.port.close();
+          } catch {}
+        }
+        pendingFetches.delete(path);
+      }
       ws?.close();
       for (const pc of pcs.values()) pc.close();
       pcs.clear();
