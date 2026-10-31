@@ -56,6 +56,7 @@ self.addEventListener("fetch", event => {
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
+    request.headers.get("X-Coinfactory-Origin-Only") === "1" ||
     url.pathname === "/p2p-manifest.json" ||
     url.pathname === "/p2p-sw.js"
   ) return;

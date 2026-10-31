@@ -12,6 +12,24 @@ export default function P2PNode() {
     let ws: WebSocket | null = null;
     const id = crypto.randomUUID().replaceAll("-", "").slice(0, 16);
     const pcs = new Map<string, RTCPeerConnection>();
+    const stats = {
+      peersConnected: 0,
+      filesReceived: 0,
+      bytesReceived: 0
+    };
+
+    function updateStats() {
+      const snapshot = { ...stats };
+      sessionStorage.setItem(
+        "coinfactory-p2p-stats",
+        JSON.stringify(snapshot)
+      );
+      window.dispatchEvent(
+        new CustomEvent("coinfactory-p2p-stats", {
+          detail: snapshot
+        })
+      );
+    }
     const channels = new Map<string, RTCDataChannel>();
     const ice = new Map<string, RTCIceCandidateInit[]>();
     const transfers = new Map<string, {
@@ -153,7 +171,10 @@ export default function P2PNode() {
         const entry = manifest.find((r) => r.path === path && r.sha256 === hash);
         if (!entry) return;
 
-        const response = await fetch(path);
+        const response = await fetch(path, {
+      cache: "no-store",
+      headers: { "X-Coinfactory-Origin-Only": "1" }
+    });
         if (!response.ok) return;
         const buffer = await response.arrayBuffer();
         if (await sha256(buffer) !== hash) {
@@ -301,6 +322,9 @@ export default function P2PNode() {
               }
             })
           );
+          stats.filesReceived++;
+          stats.bytesReceived += buffer.byteLength;
+          updateStats();
           answerPending(transfer.path, true);
           log("Recurso P2P verificado y guardado:", transfer.path);
         } catch (error) {
@@ -309,12 +333,36 @@ export default function P2PNode() {
       }
     }
 
+    let iceServers: RTCIceServer[] = [
+      { urls: "stun:stun.l.google.com:19302" }
+    ];
+
+    async function loadTurnCredentials() {
+      try {
+        const response = await fetch(
+          "https://coinfactory-signaling.onrender.com/turn-credentials",
+          { cache: "no-store" }
+        );
+        if (!response.ok) throw new Error(`TURN HTTP ${response.status}`);
+
+        const data = await response.json();
+        if (!Array.isArray(data.iceServers)) {
+          throw new Error("Configuración ICE inválida");
+        }
+
+        iceServers = data.iceServers;
+        log("Configuración TURN recibida");
+      } catch (error) {
+        log("TURN no disponible; usando STUN:", error);
+      }
+    }
+
     function makePC(peerId: string) {
       const existing = pcs.get(peerId);
       if (existing) return existing;
 
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        iceServers
       });
       pcs.set(peerId, pc);
 
@@ -337,6 +385,9 @@ export default function P2PNode() {
     function setupChannel(channel: RTCDataChannel, peerId: string) {
       channels.set(peerId, channel);
       channel.onopen = () => {
+        stats.peersConnected = [...channels.values()]
+          .filter(c => c.readyState === "open").length;
+        updateStats();
         log("Conexión P2P abierta:", peerId);
         sendJSON(channel, { kind: "manifest-request" });
       };
@@ -406,6 +457,7 @@ export default function P2PNode() {
 
     async function start() {
       await loadManifest();
+      await loadTurnCredentials();
       if (stopped) return;
 
       if ("serviceWorker" in navigator) {
