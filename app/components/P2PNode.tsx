@@ -477,11 +477,20 @@ export default function P2PNode() {
         try { void handleSignal(JSON.parse(String(event.data))); }
         catch (error) { log("Error de señalización:", error); }
       };
-      ws.onerror = () => log("Error de señalización WebSocket");
-      ws.onclose = () => {
+      ws.onerror = () => log("Error de señalización WebSocket", {
+        readyState: ws?.readyState
+      });
+      ws.onclose = (event) => {
+        log("WebSocket cerrado", {
+          code: event.code,
+          reason: event.reason || "(sin motivo)",
+          wasClean: event.wasClean
+        });
         if (!stopped) {
           log("Señalización desconectada; reintentando en 5 segundos");
-          window.setTimeout(() => { if (!stopped) void start(); }, 5000);
+          window.setTimeout(() => {
+            if (!stopped) void start();
+          }, 5000);
         }
       };
     }
