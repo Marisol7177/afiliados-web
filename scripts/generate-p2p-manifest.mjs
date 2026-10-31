@@ -38,6 +38,8 @@ for (const file of files) {
   const extension = path.extname(file).toLowerCase();
 
   if (!allowed.has(extension) || relative.endsWith(".map")) continue;
+  // No distribuir artefactos internos del protocolo de navegación de Next.js.
+  if (relative.startsWith("__next.")) continue;
 
   const info = await stat(file);
   if (info.size > 50 * 1024 * 1024) continue;
