@@ -167,6 +167,7 @@ export default function P2PNode() {
     }
 
     async function sendResource(channel: RTCDataChannel, path: string, hash: string) {
+      const transferId = crypto.randomUUID();
       try {
         const entry = manifest.find((r) => r.path === path && r.sha256 === hash);
         if (!entry) return;
@@ -183,7 +184,7 @@ export default function P2PNode() {
         }
 
         sendJSON(channel, {
-          kind: "resource-start", path, size: buffer.byteLength, sha256: hash
+          kind: "resource-start", transferId, path, size: buffer.byteLength, sha256: hash
         });
 
         const bytes = new Uint8Array(buffer);
@@ -194,13 +195,13 @@ export default function P2PNode() {
           let binary = "";
           for (let i = 0; i < part.length; i++) binary += String.fromCharCode(part[i]);
           sendJSON(channel, {
-            kind: "resource-chunk", path, data: btoa(binary)
+            kind: "resource-chunk", transferId, path, data: btoa(binary)
           });
           while (channel.bufferedAmount > 1024 * 1024) {
             await new Promise((resolve) => setTimeout(resolve, 30));
           }
         }
-        sendJSON(channel, { kind: "resource-end", path });
+        sendJSON(channel, { kind: "resource-end", transferId, path });
         log("Recurso enviado:", path);
       } catch (error) {
         log("Error al enviar recurso:", path, error);
@@ -245,19 +246,20 @@ export default function P2PNode() {
       }
 
       if (msg.kind === "resource-start" &&
+          typeof msg.transferId === "string" &&
           typeof msg.path === "string" &&
           typeof msg.sha256 === "string" &&
           Number.isSafeInteger(msg.size) && msg.size >= 0 &&
           msg.size <= 50 * 1024 * 1024) {
-        transfers.set(msg.path, {
+        transfers.set(`${peerId}:${msg.transferId}`, {
           path: msg.path, size: msg.size, sha256: msg.sha256,
           chunks: [], received: 0
         });
         return;
       }
 
-      if (msg.kind === "resource-chunk" && typeof msg.data === "string") {
-        const transfer = transfers.get(msg.path);
+      if (msg.kind === "resource-chunk" && typeof msg.transferId === "string" && typeof msg.data === "string") {
+        const transfer = transfers.get(`${peerId}:${msg.transferId}`);
         if (!transfer) return;
         const binary = atob(msg.data);
         const bytes = new Uint8Array(binary.length);
@@ -267,10 +269,10 @@ export default function P2PNode() {
         return;
       }
 
-      if (msg.kind === "resource-end") {
-        const transfer = transfers.get(msg.path);
+      if (msg.kind === "resource-end" && typeof msg.transferId === "string") {
+        const transfer = transfers.get(`${peerId}:${msg.transferId}`);
         if (!transfer) return;
-        transfers.delete(msg.path);
+        transfers.delete(`${peerId}:${msg.transferId}`);
 
         try {
           const parts = transfer.chunks.map((part) => {

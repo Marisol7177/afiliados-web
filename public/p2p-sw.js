@@ -53,12 +53,22 @@ self.addEventListener("fetch", event => {
   const request = event.request;
   const url = new URL(request.url);
 
+  const path = url.pathname;
+  const allowedP2PPath =
+    path.startsWith("/_next/static/") ||
+    [
+      "/", "/index.html", "/lab", "/lab/", "/lab.html",
+      "/404.html", "/_not-found.html", "/favicon.ico",
+      "/p2p-monitor.html"
+    ].includes(path);
+
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
     request.headers.get("X-Coinfactory-Origin-Only") === "1" ||
-    url.pathname === "/p2p-manifest.json" ||
-    url.pathname === "/p2p-sw.js"
+    path === "/p2p-manifest.json" ||
+    path === "/p2p-sw.js" ||
+    !allowedP2PPath
   ) return;
 
   event.respondWith((async () => {
