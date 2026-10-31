@@ -457,10 +457,34 @@ export default function P2PNode() {
       }
     }
 
+    let reconnectTimer: number | undefined;
+    let reconnectAttempts = 0;
+    let started = false;
+
     async function start() {
-      await loadManifest();
-      await loadTurnCredentials();
-      if (stopped) return;
+      if (stopped || started) return;
+      started = true;
+
+      try {
+        if (manifest.length === 0) await loadManifest();
+        await loadTurnCredentials();
+      } catch (error) {
+        log("Error preparando la conexión P2P:", error);
+        started = false;
+        if (!stopped && reconnectTimer === undefined) {
+          const delay = Math.min(5000 * (2 ** reconnectAttempts), 60000);
+          reconnectAttempts = Math.min(reconnectAttempts + 1, 4);
+          reconnectTimer = window.setTimeout(() => {
+            reconnectTimer = undefined;
+            if (!stopped) void start();
+          }, delay);
+        }
+        return;
+      }
+      if (stopped) {
+        started = false;
+        return;
+      }
 
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/p2p-sw.js")
@@ -486,11 +510,15 @@ export default function P2PNode() {
           reason: event.reason || "(sin motivo)",
           wasClean: event.wasClean
         });
-        if (!stopped) {
-          log("Señalización desconectada; reintentando en 5 segundos");
-          window.setTimeout(() => {
+        started = false;
+        if (!stopped && reconnectTimer === undefined) {
+          const delay = Math.min(5000 * (2 ** reconnectAttempts), 60000);
+          reconnectAttempts = Math.min(reconnectAttempts + 1, 4);
+          log(`Señalización desconectada; reintento en ${Math.round(delay / 1000)} s`);
+          reconnectTimer = window.setTimeout(() => {
+            reconnectTimer = undefined;
             if (!stopped) void start();
-          }, 5000);
+          }, delay);
         }
       };
     }
@@ -498,6 +526,8 @@ export default function P2PNode() {
     void start();
     return () => {
       stopped = true;
+      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
       navigator.serviceWorker?.removeEventListener(
         "message",
         handleServiceWorkerMessage
